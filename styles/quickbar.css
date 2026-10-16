@@ -509,3 +509,10 @@
   margin-top: 5px;
   padding-top: 5px;
 }
+
+/* Select/Deselect labels get equal width so sibling buttons never slide sideways. */
+#foundry-drawing-quickbar .dqb-find-results button[data-action="toggle-one"] {
+  min-width: 59px;
+  text-align: center;
+  justify-content: center;
+}

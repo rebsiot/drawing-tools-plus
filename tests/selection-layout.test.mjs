@@ -40,8 +40,11 @@ test("selected Drawing action buttons stay together above a compact object list"
   const section=src.slice(src.indexOf('<section class="dqb-selection"'),src.indexOf('</section>',src.indexOf('<section class="dqb-selection"')));
   const action=section.indexOf('<div class="dqb-actions">');
   const list=section.indexOf('<div class="dqb-selected-list"');
-  const finder=section.indexOf('<details class="dqb-finder"');
-  assert.ok(action>0&&list>action&&finder>list);
+  const all=src.indexOf('<details class="dqb-finder"');
+  const selectedStart=src.indexOf('<section class="dqb-selection"');
+  assert.ok(action>0 && list>action);
+  assert.ok(all>=0 && all<selectedStart, "All Drawings must remain above the entire Selected Drawings section");
+  assert.ok(!section.includes('<details class="dqb-finder"'), "Do not nest the inventory inside selection controls");
   assert.ok(!section.includes('<details class="dqb-locked"'));
 });
 test("Select button toggles Unselect on a click and leaves the V shortcut as Select",async()=>{

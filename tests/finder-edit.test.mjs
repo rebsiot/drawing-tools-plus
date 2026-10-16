@@ -30,7 +30,8 @@ test("All Drawings is the sole collapsed inventory and supports locked-only plus
   const selected = src.indexOf('<div class="dqb-selected-list"');
   const all = src.indexOf('<details class="dqb-finder"');
   const endSelection = src.indexOf('</section>', all);
-  assert.ok(selected >= 0 && all > selected && endSelection > all);
+  assert.ok(all >= 0 && selected > all && endSelection > selected,
+    "All Drawings must be above the entire Selected Drawings box");
   assert.doesNotMatch(src, /<details class="dqb-locked">/);
   assert.doesNotMatch(src, /dqb-locked-list|locked-count/);
   assert.match(src, /<summary>All Drawings \(<span data-value="scene-drawing-count">0<\/span>\)<\/summary>/);
