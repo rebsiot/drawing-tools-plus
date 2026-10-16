@@ -322,7 +322,7 @@ function createDock() {
   root.addEventListener("click", async event => {
     const button = event.target.closest("button");
     if (!button || !root.contains(button)) return;
-    if (button.dataset.tool) return selectTool(button.dataset.tool);
+    if (button.dataset.tool) return selectTool(button.dataset.tool, {toggleSelection: true});
     if (button.dataset.preset) {
       const mode = styleTargetMode(selectedDrawingObjects().map(item => ({
         id: item.document.id, locked: !canEdit(item.document)
@@ -547,11 +547,11 @@ function toggleDock({activateDrawings = true} = {}) {
   return dock ? closeDock() : openDock({activateDrawings});
 }
 
-async function selectTool(tool) {
+async function selectTool(tool, {toggleSelection = false} = {}) {
   if (!dock || !isUsable()) return;
   // Clicking a lit Select/Unselect control releases native canvas selection.
   // The Select tool remains ready for another Drawing, without modifying artwork.
-  if (tool === "select" && canvas?.drawings?.active &&
+  if (toggleSelection && tool === "select" && canvas?.drawings?.active &&
       selectedDrawingObjects().length && !arrowOverlay && !textOverlay) {
     newDrawingSerial++;
     canvas.drawings.releaseAll();
