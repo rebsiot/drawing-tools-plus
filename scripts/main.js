@@ -616,6 +616,56 @@ async function lockSelected() {
   }
   refreshSelectedPanel();
 }
+/**
+ * Delete exactly one unlocked native Drawing, only after an explicit Foundry v14
+ * confirmation. Deselect is a different action and never changes Scene data.
+ * Re-check the Scene, ID and lock state after confirmation before deleting.
+ */
+async function deleteOneDrawing(id) {
+  if (!isUsable() || !game.user?.isGM) return;
+  const scene = canvas.scene;
+  const doc = scene.drawings.get(id);
+  if (!doc) return notify("Drawing no longer exists.");
+  if (doc.locked) return notify("Locked Drawings must be explicitly unlocked before deletion.");
+  const confirm = foundry?.applications?.api?.DialogV2?.confirm;
+  if (typeof confirm !== "function")
+    return notify("Native confirmation is unavailable; nothing was deleted.", "error");
+  const html = value => String(value).replace(/[&<>"']/g,
+    character => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[character]));
+  const label = (doc.text?.trim() || drawingLabel(doc).name).slice(0, 90);
+  let approved;
+  try {
+    approved = await confirm({
+      window: {title: "Delete Drawing?"},
+      content: `<p>Delete <strong>${html(label)}</strong> (${html(drawingLabel(doc).kind)})?</p>
+        <p>Drawing ID: <code>${html(id)}</code></p>
+        <p>Only this one Drawing will be deleted. Undo Style Change cannot restore it.</p>`,
+      yes: {label: "Delete Drawing"},
+      no: {label: "Cancel"},
+      modal: true,
+      rejectClose: false
+    });
+  } catch (error) {
+    console.error(`${MODULE_ID} | Delete confirmation failed`, error);
+    return notify("Delete confirmation failed. Nothing was deleted.", "error");
+  }
+  if (approved !== true) return;
+  if (!isUsable() || canvas.scene?.id !== scene.id ||
+      scene.drawings.get(id) !== doc || doc.locked)
+    return notify("Drawing or Scene changed; nothing was deleted.");
+  await flushDirectStylePatch();
+  if (canvas.scene?.id !== scene.id || scene.drawings.get(id) !== doc || doc.locked)
+    return notify("Drawing changed; nothing was deleted.");
+  try {
+    const removed = await scene.deleteEmbeddedDocuments("Drawing", [id]);
+    if (!removed?.some(item => item.id === id)) throw new Error("Requested Drawing not deleted");
+    refreshSelectedPanel();
+    notify("Deleted one Drawing. Undo Style Change cannot restore it.", "info");
+  } catch (error) {
+    console.error(`${MODULE_ID} | Native Drawing deletion failed`, error);
+    notify("Could not delete Drawing. See console.", "error");
+  }
+}
 async function unlockDrawing(id) {
   // Explicit Unlock works from either control menu; it updates only the requested ID.
   if (!isUsable()) return;

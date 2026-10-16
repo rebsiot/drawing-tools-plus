@@ -10,9 +10,12 @@ export const DEFAULT_PREFS = Object.freeze({
   filled: false,
   fontSize: 32,
   autoStyle: true,
+  arrowEnds: "end",
   position: null
 });
 
+export const ARROW_END_OPTIONS = Object.freeze(["end", "start", "both", "none"]);
+const normalizeArrowEnds = ends => ARROW_END_OPTIONS.includes(ends) ? ends : "end";
 const STYLABLE = ["strokeColor", "strokeWidth", "strokeAlpha", "fillType", "fillColor", "fillAlpha", "textColor", "fontSize"];
 const HEX_COLOR = /^#[\da-fA-F]{6}$/;
 const clamp = (value, lower, upper, fallback) => {
@@ -35,6 +38,7 @@ export function normalizePrefs(source = {}) {
     filled: typeof source.filled === "boolean" ? source.filled : d.filled,
     fontSize: Math.round(clamp(source.fontSize, 8, 120, d.fontSize)),
     autoStyle: typeof source.autoStyle === "boolean" ? source.autoStyle : d.autoStyle,
+    arrowEnds: normalizeArrowEnds(source.arrowEnds),
     position: position && Number.isFinite(position.left) && Number.isFinite(position.top)
       ? {left: position.left, top: position.top} : null
   };
@@ -71,36 +75,43 @@ export function snapshotStyle(document) {
 }
 
 /**
- * Build a closed, filled arrow silhouette from 7 vertices. In v14 freehand "f"
- * is not a valid Drawing shape type; a native polygon ("p") is supported.
- * A filled silhouette avoids the unintended closing diagonal of an open stroke.
+ * Polygon silhouette for a single native v14 Drawing.
+ * Modes: end (default), start, both, none. No composite docs or separate engine.
+ * The first/last shape is intentionally closed for a filled arrow shaft.
  */
-export function arrowPoints(start, end, head = 18, shaftWidth = 4) {
-  const dx = end.x - start.x;
-  const dy = end.y - start.y;
+export function arrowPoints(start, end, head = 18, shaftWidth = 4, ends = "end") {
+  if (![start?.x, start?.y, end?.x, end?.y, head, shaftWidth].every(Number.isFinite)) return null;
+  if (head <= 0 || shaftWidth <= 0) return null;
+  const dx = end.x - start.x, dy = end.y - start.y;
   const distance = Math.hypot(dx, dy);
-  if (!Number.isFinite(distance) || distance < 2 || !Number.isFinite(head) || !Number.isFinite(shaftWidth)) return null;
+  if (!Number.isFinite(distance) || distance < 2) return null;
+  const startHead = ends === "start" || ends === "both";
+  const endHead = ends !== "none" && ends !== "start";
   const ux = dx / distance, uy = dy / distance;
   const px = -uy, py = ux;
   const length = Math.min(Math.max(2, head), distance * 0.45);
   const halfShaft = Math.min(Math.max(0.5, shaftWidth / 2), length * 0.28);
   const halfHead = Math.min(Math.max(halfShaft * 2.4, length * 0.48), distance * 0.3);
-  const base = {x: end.x - ux * length, y: end.y - uy * length};
-  const point = (anchor, side) => ({x: anchor.x + px * side, y: anchor.y + py * side});
-  return [
-    point(start, halfShaft),
-    point(base, halfShaft),
-    point(base, halfHead),
-    {x: end.x, y: end.y},
-    point(base, -halfHead),
-    point(base, -halfShaft),
-    point(start, -halfShaft)
-  ];
+  const baseStart = {x: start.x + ux * length, y: start.y + uy * length};
+  const baseEnd = {x: end.x - ux * length, y: end.y - uy * length};
+  const point = (origin, side) => ({x: origin.x + px * side, y: origin.y + py * side});
+  const vertices = [];
+  if (startHead) {
+    vertices.push({x: start.x, y: start.y}, point(baseStart, halfHead), point(baseStart, halfShaft));
+  } else vertices.push(point(start, halfShaft));
+  if (endHead) {
+    vertices.push(point(baseEnd, halfShaft), point(baseEnd, halfHead),
+      {x: end.x, y: end.y}, point(baseEnd, -halfHead), point(baseEnd, -halfShaft));
+  } else vertices.push(point(end, halfShaft), point(end, -halfShaft));
+  if (startHead) {
+    vertices.push(point(baseStart, -halfShaft), point(baseStart, -halfHead));
+  } else vertices.push(point(start, -halfShaft));
+  return vertices;
 }
 
 export function arrowDocumentData(start, end, prefs) {
   const p = normalizePrefs(prefs);
-  const points = arrowPoints(start, end, Math.max(14, p.strokeWidth * 5), p.strokeWidth);
+  const points = arrowPoints(start, end, Math.max(14, p.strokeWidth * 5), p.strokeWidth, p.arrowEnds);
   if (!points) return null;
   const xs = points.map(point => point.x);
   const ys = points.map(point => point.y);
@@ -117,11 +128,40 @@ export function arrowDocumentData(start, end, prefs) {
     ...stylePatch({...p, filled: false}),
     fillType: 1,
     fillColor: p.strokeColor,
-    fillAlpha: p.strokeAlpha,
+    fillAlpha: Math.max(0.3, p.strokeAlpha),
     strokeWidth: 0,
     strokeAlpha: 0,
-    flags: {[MODULE_ID]: {kind: "arrow", version: 1}}
+    flags: {[MODULE_ID]: {kind: "arrow", ends: p.arrowEnds, version: 2}}
   };
+}
+
+/**
+ * Arrows use a filled polygon silhouette; a normal "Outline" preset would erase
+ * the fill and leave strokeWidth=0. Keep arrow visibility during styling.
+ * Geometry (including an already-resized or moved arrow) is not rewritten.
+ */
+export function isQuickbarArrow(document) {
+  return document?.flags?.[MODULE_ID]?.kind === "arrow";
+}
+
+export function visibleArrowStylePatch(document, prefs, field = null) {
+  const p = normalizePrefs(prefs);
+  if (!isQuickbarArrow(document)) return field ? singleStylePatch(field, p) : stylePatch(p);
+  const keep = {fillType: 1, strokeWidth: 0, strokeAlpha: 0};
+  switch (field) {
+    case "textColor": return {textColor: p.textColor, textAlpha: 1};
+    case "fontSize": return {fontSize: p.fontSize, textAlpha: 1};
+    case "strokeColor": return {...keep, fillColor: p.strokeColor, strokeColor: p.strokeColor,
+      fillAlpha: Math.max(0.3, p.strokeAlpha)};
+    case "fillColor": return {...keep, fillColor: p.fillColor, strokeColor: p.fillColor,
+      fillAlpha: Math.max(0.3, p.fillAlpha)};
+    case "fillAlpha": return {...keep, fillAlpha: Math.max(0.3, p.fillAlpha)};
+    case "strokeWidth":
+    case "filled": return {...keep, fillAlpha: Math.max(0.3, p.fillAlpha)};
+    default: return {...keep, fillColor: p.strokeColor, strokeColor: p.strokeColor,
+      fillAlpha: Math.max(0.3, p.strokeAlpha),
+      textColor: p.textColor, fontSize: p.fontSize};
+  }
 }
 
 /** Duplicate only a selected, unlocked native Drawing; preserve flags, geometry, and styles. */
