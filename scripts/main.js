@@ -310,6 +310,10 @@ async function openDock() {
   refreshToolHighlight();
 }
 function closeDock() {
+  newDrawingSerial++;
+  if (pendingStyleTimer !== null) clearTimeout(pendingStyleTimer);
+  pendingStyleTimer = null;
+  if (pendingStyle) void flushDirectStylePatch();
   clearFocusMarker();
   exitArrow();
   exitTextPlacement();
@@ -320,6 +324,7 @@ function toggleDock() { return dock ? closeDock() : openDock(); }
 
 async function selectTool(tool) {
   if (!dock || !isUsable()) return;
+  newDrawingSerial++;
   if (tool === "arrow" || tool === "text") {
     try {
       await ui.controls.activate({control: "drawings", tool: "select"});
@@ -342,6 +347,39 @@ async function selectTool(tool) {
     notify("The native drawing tool could not be selected.", "error");
   }
   refreshToolHighlight();
+}
+
+/** Select a newly created local native Drawing, once Foundry has rendered its placeable.
+ * This does not modify or import any Scene documents; it only changes local selection.
+ */
+function selectCreatedDrawing(drawingId, sceneId) {
+  const serial = ++newDrawingSerial;
+  setTimeout(async () => {
+    if (serial !== newDrawingSerial || !dock || !isUsable() ||
+        canvas.scene?.id !== sceneId || !canvas.drawings.active) return;
+    try {
+      await ui.controls.activate({control: "drawings", tool: "select"});
+    } catch (error) {
+      console.warn(`${MODULE_ID} | New drawing was created, but native Select activation failed`, error);
+      return;
+    }
+    const trySelect = attempt => {
+      if (serial !== newDrawingSerial || !dock || !isUsable() ||
+          canvas.scene?.id !== sceneId || !canvas.drawings.active) return;
+      const placeable = canvas.drawings.get(drawingId);
+      if (placeable) {
+        try {
+          canvas.drawings.releaseAll();
+          if (placeable.control({releaseOthers: true})) refreshSelectedPanel();
+        } catch (error) {
+          console.warn(`${MODULE_ID} | New Drawing could not be selected`, error);
+        }
+      } else if (attempt < 8) {
+        setTimeout(() => trySelect(attempt + 1), 65);
+      }
+    };
+    trySelect(0);
+  }, 60);
 }
 
 /** Read current native selection; no persistent selection flags. */
@@ -754,6 +792,8 @@ function enterArrow() {
         // Enter the native drawing undo history when supported by this Foundry build.
         try { canvas.drawings.storeHistory("create", created.map(d => d.toObject())); }
         catch (error) { console.debug(`${MODULE_ID} | Native arrow undo registration unavailable`, error); }
+        exitArrow();
+        selectCreatedDrawing(created[0].id, canvas.scene.id);
       }
     } catch (error) {
       console.error(`${MODULE_ID} | Arrow creation failed`, error);
@@ -901,7 +941,7 @@ function showTextDialog(clientX, clientY) {
     button.disabled = true;
     try {
       if (operation.drawingId) {
-        // Only text, fontSize and textColor change. Position, shape, lock, flags and ID persist.
+        // Only text, fontSize, textColor and visible text opacity change. Shape, lock, flags and ID persist.
         const updated = await canvas.scene.updateEmbeddedDocuments("Drawing", [patch]);
         if (!updated?.length) throw new Error("No Drawing was updated");
         exitTextPlacement();
@@ -915,10 +955,7 @@ function showTextDialog(clientX, clientY) {
         try { canvas.drawings.storeHistory("create", created.map(doc => doc.toObject())); }
         catch(error) { console.debug(MODULE_ID + " | Native text undo not available", error); }
         exitTextPlacement();
-        try {
-          canvas.drawings.releaseAll();
-          canvas.drawings.get(created[0].id)?.control({releaseOthers: false});
-        } catch(error) { console.debug(MODULE_ID + " | Could not select new text", error); }
+        selectCreatedDrawing(created[0].id, canvas.scene.id);
       }
       refreshSelectedPanel();
     } catch(error) {
@@ -993,7 +1030,14 @@ Hooks.once("ready", () => {
   });
   Hooks.on("controlDrawing", () => queueMicrotask(refreshSelectedPanel));
   Hooks.on("updateDrawing", refreshSelectedPanel);
-  Hooks.on("createDrawing", refreshSelectedPanel);
+  Hooks.on("createDrawing", (doc, _options, userId) => {
+    refreshSelectedPanel();
+    if (!dock || !isUsable() || !canvas.drawings.active ||
+        userId !== game.user.id || doc?.parent?.id !== canvas.scene.id ||
+        doc.locked || arrowOverlay || textOverlay ||
+        !["rect", "ellipse", "polygon", "freehand"].includes(ui.controls?.tool?.name)) return;
+    selectCreatedDrawing(doc.id, canvas.scene.id);
+  });
   Hooks.on("deleteDrawing", refreshSelectedPanel);
   Hooks.on("canvasPan", refreshFocusMarker);
   Hooks.on("renderSceneControls", () => {
@@ -1018,5 +1062,5 @@ Hooks.once("ready", () => {
     // A tool switch or Scene navigation should never leave an invisible input shield over the canvas.
     if (arrowOverlay && !arrowOverlay.contains(event.target) && !dock?.contains(event.target) && !canvas?.drawings?.active) exitArrow();
   });
-  console.info(`${MODULE_ID} | v0.1.4 ready (Foundry v14 native Drawing workflow)`);
+  console.info(`${MODULE_ID} | v0.1.5 ready (Foundry v14 native Drawing workflow)`);
 });

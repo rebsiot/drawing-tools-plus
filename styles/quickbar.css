@@ -202,3 +202,11 @@
 @media (prefers-reduced-motion: reduce) {
   #dqb-focus-marker {animation:none;}
 }
+
+/* Always show what the style controls will change. */
+#foundry-drawing-quickbar .dqb-style-scope {
+  font-size: 11px; line-height: 1.35; color: #cbd5df;
+  margin: 4px 0 8px; padding: 6px 8px;
+  background: #29323d; border-left: 3px solid #b4cced;
+}
+#foundry-drawing-quickbar:not(.dqb-multi-selection) [data-action="apply-selected"] {display:none;}
