@@ -1,6 +1,16 @@
-# Test Report — Drawing Quickbar v0.1.13
+# Test Report — Drawing Quickbar v0.1.14
 
 **Date:** 2026-10-16
+
+## v0.1.14 — Stable All Drawings list during multi-selection (2026-10-16)
+
+**Reported live bug:** v0.1.13's Selected Drawings section sits above the All Drawings inventory, so each new selection expands the upper UI and shifts remaining row buttons down. `refreshSelectedPanel` also calls `refreshFinder()`, replacing every DOM row and losing focus on each click.
+
+**Source changes:** Move entire Selected Drawings section beneath the All Drawings panel. Selection-only changes use a DOM in-place selected-state refresh (button text/aria/highlight); actual data, search/filter and pagination rebuild the inventory while retaining scroll positions. Inset highlight and minimum toggle width prevent lateral shifts.
+
+**Automated checks:** Static assertions for All-before-Selected markup order, all existing selected actions retained, selection refresh not invoking inventory replacement, in-place toggling without add/remove DOM methods, scroll restoration, true Drawing update/delete hooks, stable-width CSS; release manifest and ZIP metadata. Native Drawing state and authorization tests remain unchanged.
+
+**Pending real Foundry v14 verification:** Click five or more Select controls successively, confirm row positions and active button focus remain stable, native controlled list reflects selection count, middle-row deselection and batch style work, filter/search/locked gridlines and player access unchanged.
 
 ## v0.1.13 — Unified All Drawings locked-only filter (2026-10-16)
 

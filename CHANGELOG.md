@@ -2,6 +2,13 @@
 
 Short summaries of changes you can see in Foundry. See the [test report](docs/TEST-REPORT.md) for technical verification.
 
+## v0.1.14 — Stable Multi-Select, No Jumping
+- **Fixed:** **All Drawings** remains above the entire **Selected Drawings** box. Growing the selection no longer pushes the next Select button down the screen.
+- **Fixed:** Selecting or deselecting updates existing All Drawings buttons/highlights **in place** rather than rebuilding every row and losing button focus.
+- **Improved:** Select/Deselect buttons have a stable minimum width, and the selection highlight uses an inset marker that doesn't shift row geometry.
+- **Preserved:** Native additive selection, Selected Drawings count/actions, Locked only, text search, player ownership and locked-gridline protections. Search and real Scene Drawing changes still refresh the inventory while preserving scroll.
+- **Testing:** Node/static/mock regressions and installable ZIP checks; live Foundry v14 verification remains pending.
+
 ## v0.1.13 — Locked Filter in All Drawings
 - **Simplified:** Removed the duplicate **Locked Drawings** panel. All objects, including locked Drawings, remain in one expandable **All Drawings** inventory.
 - **Clear at a glance:** Locked objects show a small, red **lock icon** alongside the name rather than repeating “Locked” on a second line.

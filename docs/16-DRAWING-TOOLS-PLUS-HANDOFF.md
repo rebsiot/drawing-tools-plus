@@ -206,6 +206,21 @@ v0.1.3 supersedes v0.1.2 and places the Selected Drawings inspector/Lock actions
 
 **Release boundary:** Versioned v0.1.13 ZIP, same stable GitHub manifest URL and Personal Use Only license. v0.1.12 retained as rollback. Owning handoff remains this file; no shared contract or adjacent module changes.
 
+## 16.1 update — v0.1.14: remove selection-induced inventory jumps (2026-10-16)
+
+**Live user feedback:** In published v0.1.13, All Drawings is nested *below* the expanding Selected Drawings heading/actions/list. Each selected item increases that upper section's height and pushes all inventory rows downward, making consecutive clicking frustrating. Selection also invoked `refreshFinder()` via `refreshSelectedPanel()`, replacing the DOM buttons on every click and losing focus. User explicitly approved moving the **entire Selected Drawings box** below All Drawings, including all actions and selected-item list.
+
+**Implementation:**
+- Move one unchanged native All Drawings `<details class="dqb-finder">` directly below creation tools/conditional Arrow options, above the whole `<section class="dqb-selection">`. Selected box retains count, GM/player-safe actions, and all selected rows. Style presets remain below.
+- `refreshSelectedPanel` updates only selected box plus `refreshFinderSelectionState()`, which changes existing All Drawings rows' `dqb-is-selected` class and Select/Deselect button label, `aria-pressed`, tooltip/accessible label. It does **not** call `refreshFinder()` during native control/release, preserving DOM row identity, focus and scroll.
+- Actual Drawing create/update/delete hooks explicitly call `refreshFinder()` again; text search/filter/pagination and panel toggle already call it. Real list redraw restores outer Quickbar and list scroll positions. Selection marker becomes inset box-shadow, not width-changing border/padding, and toggle buttons gain stable 59px minimum width.
+- No changes to Drawing native APIs, ownership, locked gridlines, IDs, Scene documents, tutorial settings, module ID, license, player permissions or style data.
+- **Unresolved UI question:** User also requested a “different symbol” alongside an unmarked screenshot. The exact target icon is ambiguous (launcher logo vs Select vs another tool); ask which before silently changing icons.
+
+**Required test:** On a disposable Scene with 5+ Drawings, expand All Drawings and click Select repeatedly from top to bottom. The entire inventory must remain visually fixed, each clicked button become Deselect without losing focus, and Selected Drawings beneath it must grow. Deselect a middle row while all others stay controlled; use main Unselect. Verify real updates/search still refresh correct rows and preserve scroll, no change to artwork or protections. Static/Node tests and GitHub packaging are not live Foundry verification.
+
+**Owning handoff:** `docs/16-DRAWING-TOOLS-PLUS-HANDOFF.md`, v0.1.14 beta, source from verified v0.1.13 main SHA `921a3e3efe3ffffe0c99ef52c558317c7a1a5560`. Roll back module to v0.1.13 if needed; backups protect world data. No shared contract changes.
+
 ## Source of truth and GitHub release boundaries
 
 - Use the actual GitHub source at `rebsiot/drawing-tools-plus` (default branch `main`) and/or the newest verified working ZIP. Handoff notes describe intent but are not code.

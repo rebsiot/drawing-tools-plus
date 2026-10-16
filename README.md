@@ -1,4 +1,4 @@
-# Drawing Tools+ — v0.1.13 Beta
+# Drawing Tools+ — v0.1.14 Beta
 
 **Foundry:** v14 · **Module ID:** `foundry-drawing-quickbar` · **License:** [Personal Use Only (No Redistribution)](LICENSE.md)
 
@@ -7,9 +7,9 @@ A small floating toolbar for **native Foundry Scene Drawings**. No extra drawing
 ## Core workflow
 
 - **Compact tools:** Select, Pen, Box, Circle, Polygon and Text fit on one row; Arrow sits directly below. Pen creates an **open stroke with no fill**, even when the current preset is Filled.
-- **Select several Drawings:** Expand **All Drawings** and click **Select** next to each Drawing you want. Earlier selections stay selected, and each selected row changes to **Deselect**; click it to remove only that Drawing. There's no extra multi-select mode or keyboard modifier. The main **Unselect** button releases the full selection, and `V` still activates native Select without clearing it.
+- **Fast, stable multi-select:** **All Drawings** now sits above the entire **Selected Drawings** box. Click **Select** down the list—earlier selections stay selected, the list does not jump or rebuild, and the clicked button turns into **Deselect** in place. Deselect removes only that Drawing. The main **Unselect** button releases all controlled Drawings, and `V` still activates native Select without clearing it.
 - **Appearance:** Stroke/Fill/Text colors and Line width, Fill opacity, Text size sliders. Slider rows are closer together. One selected unlocked Drawing is styled immediately; with several Drawings selected, choose a preset or edit settings, then click **Apply to N Selected**. No bulk deletion is triggered. Pen strokes cannot be filled; arrow silhouettes remain visible.
-- **Selected details:** Lock/Properties/Duplicate/Edit Text and other actions appear **above** the selected-Drawing list, so the selected object stays near its controls.
+- **Selected details:** The entire **Selected Drawings** box (count, Lock/Properties/Duplicate/Edit Text/Apply/Undo actions, and selected-object list) is **below All Drawings**, so growing the selection never moves the next row you want to click. Its action buttons remain above the selected-object list.
 - **One Drawing list:** Expand **All Drawings** to search, Locate, Select, add text, or Delete eligible items. A small **red lock icon** beside the name marks protected artwork. Toggle **Locked only** beside the search label to see just locked items; turn it off to show everything again. Search and Show More still work while filtered. GMs can **Locate**, **Info** (read-only) or **Unlock** locked art right in that same list. Players see only permitted visible Drawings and cannot unlock anything.
 - **Arrows and text:** Arrows support Start/End/Both/No heads, plus Triangle/Diamond/Chevron silhouettes. Text uses a focused dialog. Deselect never deletes; Delete requires confirmation. **Undo Style Change** restores appearance only.
 - **First-use tutorial:** A four-step walkthrough appears on a user's first Quickbar opening. **Not now** defers it until another session; **Don't Show Again** persists on that Foundry User account. **Tutorial** in the footer reopens it.
@@ -40,20 +40,20 @@ Install through **Foundry Setup → Add-on Modules → Install by Manifest URL**
 
 On a disposable Scene with copied/temporary art:
 
-1. Confirm the first six tools fit on one row, Arrow is beneath them, selected details follow the action buttons, and the three sliders have reduced vertical gaps.
+1. Confirm the first six tools fit on one row, Arrow is beneath them, **All Drawings is above Selected Drawings**, and the three sliders still have reduced vertical gaps.
 2. Select **Filled**, then **Pen**. Draw a curved, open path. Confirm its endpoints are not connected, it has no filled interior and the stroke survives a refresh. Restyle the stroke with Outline or Danger.
-3. Expand **All Drawings** and click **Select** on two or three unlocked test Drawings. Verify each remains selected, and the button in each row becomes **Deselect**. Click Deselect on the second: the others must stay selected. Choose a preset and click **Apply to N Selected**; verify only the remaining selected Drawings change.
+3. Expand **All Drawings** and click Select repeatedly on at least five expendable Drawings. The clicked rows must stay in exactly the same vertical positions; none of their buttons should jump sideways or lose focus. Each selected row becomes Deselect, and the selection count/list below All Drawings grows. Deselect the middle Drawing: all other selections remain. Apply a preset using **Apply to N Selected** and verify only those Drawings change.
 4. Click the main **Unselect** control: all Drawings should become deselected, but their positions and styles must not change.
 5. GM: Lock three expendable Drawings. Open **All Drawings** and verify each locked name has a red lock icon. Turn on **Locked only**: only those three should remain visible, while the section heading retains the total Scene count. Search for one locked Drawing, use **Locate/Info**, then **Unlock** it and verify that it disappears from the locked-only results without changing the other two. Turn the filter off and confirm all Drawings return.
 6. Player with **Use Drawing Tools** enabled: draw a shape, then style, move and delete that shape. Confirm the player cannot change GM artwork, another player's art, or a locked map gridline. Repeat with the player tutorial.
 7. Check the Text dialog and arrows, Undo Style Change, a large All Drawings list, and that no selection/delete action rewrites protected gridlines.
 
-Report the exact Foundry v14 build and the **first browser console error** if a test fails. The new code has automated/unit/mock tests and ZIP packaging checks; **the consolidated Drawing list and earlier GM/player/Pen behavior have not been verified live on your Foundry instance**.
+Report the exact Foundry v14 build and the **first browser console error** if a test fails. The new code has automated/unit/mock tests and ZIP packaging checks; **the new stable-click multi-select layout and earlier GM/player/Pen behavior have not been verified live on your Foundry instance**.
 
 ## Known limits and rollback
 
 The Quickbar uses native Drawing documents and native permissions. It does not provide custom user-named style libraries, grouping/layer replacement, advanced snapping, or a separate undo history. Background/Working groups remain planned, not implemented.
 
-To revert module code, install [v0.1.12](https://github.com/rebsiot/drawing-tools-plus/releases/tag/v0.1.12). This does **not** undo saved Scene document changes or restore deleted Drawings—keep your matching world backup.
+To revert module code, install [v0.1.13](https://github.com/rebsiot/drawing-tools-plus/releases/tag/v0.1.13). This does **not** undo saved Scene document changes or restore deleted Drawings—keep your matching world backup.
 
-[Readable Changelog](CHANGELOG.md) · [Release Notes](docs/releases/v0.1.13.md) · [Tests](docs/TEST-REPORT.md) · [Development Handoff](docs/16-DRAWING-TOOLS-PLUS-HANDOFF.md)
+[Readable Changelog](CHANGELOG.md) · [Release Notes](docs/releases/v0.1.14.md) · [Tests](docs/TEST-REPORT.md) · [Development Handoff](docs/16-DRAWING-TOOLS-PLUS-HANDOFF.md)
