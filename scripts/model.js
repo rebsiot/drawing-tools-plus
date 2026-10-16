@@ -98,6 +98,26 @@ export function arrowPoints(start, end, head = 18, shaftWidth = 4,
   const length = Math.min(Math.max(2, head), distance * 0.45);
   const halfShaft = Math.min(Math.max(0.5, shaftWidth / 2), length * 0.28);
   const halfHead = Math.min(Math.max(halfShaft * 2.4, length * 0.48), distance * 0.3);
+  // An open-chevron uses a single native freehand stroke, not a filled
+  // polygon. It is unmistakably different from the solid triangle and remains
+  // one native Drawing with the same arrow author/permission contracts.
+  if (shape === "chevron") {
+    const wing = (origin, along, side) => ({
+      x: origin.x + ux * along + px * side,
+      y: origin.y + uy * along + py * side
+    });
+    const result = [];
+    if (startHead) {
+      result.push(wing(start, length, halfHead), {...start},
+        wing(start, length, -halfHead), {...start});
+    } else result.push({...start});
+    result.push({...end});
+    if (endHead) {
+      result.push(wing(end, -length, halfHead), {...end},
+        wing(end, -length, -halfHead));
+    }
+    return result;
+  }
   const offset = (origin, distanceAlong) => ({
     x: origin.x + ux * distanceAlong,
     y: origin.y + uy * distanceAlong
@@ -165,18 +185,20 @@ export function arrowDocumentData(start, end, prefs) {
   const flat = points.flatMap(point => [
     Number((point.x - x).toFixed(2)), Number((point.y - y).toFixed(2))
   ]);
+  const openChevron = p.arrowHeadShape === "chevron";
   return {
     name: "Arrow",
     x, y,
-    shape: {type: "p", width, height, points: flat},
+    shape: {type: openChevron ? "f" : "p", width, height, points: flat},
     ...stylePatch({...p, filled: false}),
-    fillType: 1,
+    fillType: openChevron ? 0 : 1,
     fillColor: p.strokeColor,
-    fillAlpha: Math.max(0.3, p.strokeAlpha),
-    strokeWidth: 0,
-    strokeAlpha: 0,
+    fillAlpha: openChevron ? 0 : Math.max(0.3, p.strokeAlpha),
+    strokeWidth: openChevron ? p.strokeWidth : 0,
+    strokeAlpha: openChevron ? p.strokeAlpha : 0,
     flags: {[MODULE_ID]: {
-      kind: "arrow", ends: p.arrowEnds, headShape: p.arrowHeadShape, version: 3
+      kind: "arrow", ends: p.arrowEnds, headShape: p.arrowHeadShape,
+      version: openChevron ? 4 : 3
     }}
   };
 }
@@ -190,6 +212,9 @@ export function isQuickbarArrow(document) {
   return document?.flags?.[MODULE_ID]?.kind === "arrow";
 }
 export function isQuickbarSilhouette(document) {
+  // Existing v3 filled Chevron drawings remain filled and unmodified;
+  // only new open-stroke Chevron drawings use the freehand style path.
+  if (document?.shape?.type === "f") return false;
   return ["arrow", "line", "route", "callout-leader"]
     .includes(document?.flags?.[MODULE_ID]?.kind);
 }
