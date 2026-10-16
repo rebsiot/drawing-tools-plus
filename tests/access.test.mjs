@@ -71,6 +71,8 @@ test("Quickbar source rechecks authorship for every edit, undo and Delete confir
   assert.match(src,/return canEdit\(current\)/);
   assert.match(src,/if \(!isUsable\(\) \|\| !game\.user\.isGM\)/);
   assert.match(src,/lockButton\.hidden = !game\.user\.isGM/);
-  assert.match(src,/const locked = \(game\.user\.isGM \? sceneDrawingDocuments\(\) : \[\]\)/);
+  assert.match(src,/filterLockedDrawings\(documents, finderLockedOnly\)/);
+  assert.match(src,/if \(document\.locked && game\.user\.isGM\)/);
+  assert.doesNotMatch(src,/<details class="dqb-locked"/);
   assert.match(src,/if \(operation\.drawingId \? !canEdit\(existing\) : !canUseDrawingQuickbar\(game\.user\)\)/);
 });

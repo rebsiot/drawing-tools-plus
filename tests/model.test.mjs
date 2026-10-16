@@ -3,7 +3,7 @@ import assert from 'node:assert/strict';
 import {
   MODULE_ID, DEFAULT_PREFS, ARROW_END_OPTIONS, ARROW_HEAD_SHAPES, normalizePrefs, stylePatch,
   arrowPoints, arrowDocumentData, duplicateDrawingData, textDocumentData, drawingLabel,
-  drawingCenter, editTextPatch, findSceneDrawings,
+  drawingCenter, editTextPatch, findSceneDrawings, filterLockedDrawings,
   stylePreferencesFromDrawing, singleStylePatch, styleTargetMode,
   visibleArrowStylePatch, isQuickbarArrow, penStylePatch, drawingAppearancePatch,
   shouldRunDrawingShortcut, snapshotStyle, shouldStyleNewDrawing, PRESETS
@@ -397,4 +397,25 @@ test('Freehand protection does not change rectangles or native Arrow behavior', 
   assert.equal(arrowStyle.fillType,1);
   assert.ok(arrowStyle.fillAlpha>=.3);
   assert.equal(arrowStyle.strokeWidth,0);
+});
+
+test('Locked only filters original native Drawing documents without modifying data', () => {
+  const all=[
+    {id:"grid",name:"Protected Grid",locked:true},
+    {id:"line",name:"Route",locked:false},
+    {id:"imported",name:"Imported",locked:undefined},
+    {id:"lock-true",name:"Bad legacy flag",locked:1}
+  ];
+  const before=structuredClone(all);
+  assert.equal(filterLockedDrawings(all, false),all,
+    "All Drawings retains original list identity when the filter is off");
+  assert.deepEqual(filterLockedDrawings(all,true).map(d=>d.id),["grid"],
+    "Only native locked === true is considered protected");
+  assert.equal(findSceneDrawings(filterLockedDrawings(all,true),"grid").matches,1,
+    "Text search runs within the locked-only subset");
+  assert.equal(findSceneDrawings(filterLockedDrawings(all,true),"route").matches,0,
+    "Nonlocked matches are excluded before search");
+  assert.deepEqual(filterLockedDrawings([],true),[]);
+  assert.deepEqual(filterLockedDrawings(null,true),[]);
+  assert.deepEqual(all,before,"Filter must not mutate lock states, identities or artwork");
 });

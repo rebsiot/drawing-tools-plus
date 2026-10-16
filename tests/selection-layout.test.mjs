@@ -40,8 +40,9 @@ test("selected Drawing action buttons stay together above a compact object list"
   const section=src.slice(src.indexOf('<section class="dqb-selection"'),src.indexOf('</section>',src.indexOf('<section class="dqb-selection"')));
   const action=section.indexOf('<div class="dqb-actions">');
   const list=section.indexOf('<div class="dqb-selected-list"');
-  const locked=section.indexOf('<details class="dqb-locked"');
-  assert.ok(action>0&&list>action&&locked>list);
+  const finder=section.indexOf('<details class="dqb-finder"');
+  assert.ok(action>0&&list>action&&finder>list);
+  assert.ok(!section.includes('<details class="dqb-locked"'));
 });
 test("Select button toggles Unselect on a click and leaves the V shortcut as Select",async()=>{
   const src=await readFile(new URL("../scripts/main.js",import.meta.url),"utf8");
