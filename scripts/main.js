@@ -2,7 +2,8 @@ import {
   MODULE_ID, DEFAULT_PREFS, PRESETS, normalizePrefs, stylePatch,
   snapshotStyle, arrowPoints, arrowDocumentData, duplicateDrawingData, textDocumentData,
   drawingLabel, drawingCenter, findSceneDrawings, editTextPatch,
-  stylePreferencesFromDrawing, singleStylePatch, styleTargetMode, visibleArrowStylePatch, isQuickbarArrow,
+  stylePreferencesFromDrawing, singleStylePatch, styleTargetMode, drawingAppearancePatch,
+  penStylePatch, isQuickbarArrow,
   shouldRunDrawingShortcut, shouldStyleNewDrawing
 } from "./model.js";
 import {TUTORIAL_STEPS, TUTORIAL_DISMISSED_FLAG, shouldAutoShowTutorial, tutorialStepIndex}
@@ -74,12 +75,20 @@ function renderStyleInputs() {
   const selected = selectedDrawingObjects();
   const selectedArrow = selected.length === 1 &&
     canEdit(selected[0]?.document) && isQuickbarArrow(selected[0]?.document);
+  const selectedPen = selected.length === 1 && selected[0]?.document?.shape?.type === "f";
   const width = dock.querySelector('[name="strokeWidth"]');
   if (width) {
     width.disabled = selectedArrow;
     width.title = selectedArrow
       ? "Arrow thickness is fixed when drawn; set line width first, or use the native Drawing resize handles."
       : "Line width";
+  }
+  for (const name of ["filled", "fillColor", "fillAlpha"]) {
+    const field = dock.querySelector('[name="' + name + '"]');
+    if (field) {
+      field.disabled = selectedPen;
+      field.title = selectedPen ? "Pen is an open stroke and cannot be filled." : "";
+    }
   }
   dock.querySelector('[data-value="strokeWidth"]').textContent = `${style.strokeWidth}px`;
   dock.querySelector('[data-value="fillAlpha"]').textContent = `${Math.round(style.fillAlpha * 100)}%`;
@@ -106,8 +115,10 @@ function synchronizeStyleTarget(selected) {
   const hint = dock.querySelector('[data-role="style-scope"]');
   if (hint) hint.textContent = mode.mode === "single"
     ? (isQuickbarArrow(selected[0]?.document)
-      ? "Editing an arrow: its color/opacity can change, but thickness is set before drawing."
-      : "Editing this Drawing now. Changes apply immediately.")
+      ? "Arrow appearance: color and opacity. Thickness is set when drawn."
+      : selected[0]?.document?.shape?.type === "f"
+        ? "Pen stroke: line color and width. Freehand remains unfilled."
+        : "Editing this Drawing now. Changes apply immediately.")
     : mode.mode === "batch"
       ? `${mode.count} unlocked selected. Adjust the controls, then Apply to All Selected.`
       : selected.length && !selected.some(item => canEdit(item.document))
@@ -166,10 +177,22 @@ function refreshToolHighlight() {
   if (!dock) return;
   const active = textOverlay ? "text" : (arrowOverlay ? "arrow" :
     (canvas?.drawings?.active ? (ui.controls?.tool?.name ?? "select") : null));
+  const hasSelection = Boolean(canvas?.drawings?.active && selectedDrawingObjects().length);
   for (const button of dock.querySelectorAll("[data-tool]")) {
-    const selected = button.dataset.tool === active;
+    // Select is lit only while one or more native Drawings are controlled.
+    const selected = button.dataset.tool === active &&
+      (button.dataset.tool !== "select" || hasSelection);
     button.classList.toggle("active", selected);
     button.setAttribute("aria-pressed", String(selected));
+    if (button.dataset.tool === "select") {
+      const title = hasSelection ? "Unselect" : "Select";
+      const span = button.querySelector("span");
+      if (span) span.textContent = title;
+      button.title = hasSelection
+        ? "Unselect all Drawings without changing or deleting them (V)"
+        : "Select a Drawing on the canvas (V)";
+      button.setAttribute("aria-label", button.title);
+    }
   }
   // Do not show options for a selected existing arrow or a non-Arrow tool.
   const options = dock.querySelector(".dqb-arrow-options");
@@ -212,13 +235,15 @@ function createDock() {
     </div>
     <div class="dqb-content">
       <div class="dqb-tools" role="group" aria-label="Drawing tools">
-        <button type="button" data-tool="select" title="Select and edit (V)"><i class="fa-solid fa-arrow-pointer"></i><span>Select</span></button>
-        <button type="button" data-tool="freehand" title="Freehand (F)"><i class="fa-solid fa-pencil"></i><span>Pen</span></button>
+        <button type="button" data-tool="select" title="Select or Unselect (V)" aria-label="Select a Drawing"><i class="fa-solid fa-arrow-pointer"></i><span>Select</span></button>
+        <button type="button" data-tool="freehand" title="Freehand Pen — open stroke, never filled (F)"><i class="fa-solid fa-pencil"></i><span>Pen</span></button>
         <button type="button" data-tool="rect" title="Rectangle (R)"><i class="fa-regular fa-square"></i><span>Box</span></button>
         <button type="button" data-tool="ellipse" title="Ellipse (E)"><i class="fa-regular fa-circle"></i><span>Circle</span></button>
         <button type="button" data-tool="polygon" title="Polygon (P)"><i class="fa-solid fa-draw-polygon"></i><span>Polygon</span></button>
         <button type="button" data-tool="text" title="Text (T)"><i class="fa-solid fa-font"></i><span>Text</span></button>
-        <button type="button" data-tool="arrow" title="Draw an arrow by dragging (A)"><i class="fa-solid fa-arrow-right-long"></i><span>Arrow</span></button>
+      </div>
+      <div class="dqb-arrow-tool">
+        <button type="button" data-tool="arrow" title="Draw an arrow by dragging (A)"><i class="fa-solid fa-arrow-right-long"></i> Arrow</button>
       </div>
       <div class="dqb-arrow-options" hidden>
         <div class="dqb-section-title">ARROW OPTIONS</div>
@@ -241,7 +266,6 @@ function createDock() {
       </div>
       <section class="dqb-selection" aria-label="Selected drawings">
         <div class="dqb-section-title">SELECTED DRAWINGS <strong data-value="selected-count">0</strong></div>
-        <div class="dqb-selected-list" aria-live="polite"></div>
         <div class="dqb-actions">
           <button type="button" data-action="lock-selected" title="Protect selected drawings from ordinary canvas edits"><i class="fa-solid fa-lock"></i> Lock</button>
           <button type="button" data-action="open-properties" title="Open native properties for one selected drawing"><i class="fa-solid fa-sliders"></i> Properties</button>
@@ -250,6 +274,7 @@ function createDock() {
           <button type="button" data-action="apply-selected" title="Only for multiple selections: apply the chosen style to unlocked Drawings"><i class="fa-solid fa-paintbrush"></i> Apply to All Selected</button>
           <button type="button" data-action="undo-style" title="Undo the most recent Quickbar appearance change only; not movement, text edits or deletion"><i class="fa-solid fa-rotate-left"></i> Undo Style Change</button>
         </div>
+        <div class="dqb-selected-list" aria-live="polite"></div>
         <details class="dqb-locked">
           <summary>Locked Drawings (<span data-value="locked-count">0</span>)</summary>
           <div class="dqb-locked-list"></div>
@@ -304,7 +329,7 @@ function createDock() {
       })));
       if (mode.mode === "single") {
         editingStyle = normalizePrefs({...activeStyle(), ...PRESETS[button.dataset.preset]});
-        queueDirectStylePatch(visibleArrowStylePatch(selectedDrawingObjects()[0]?.document, editingStyle));
+        queueDirectStylePatch(drawingAppearancePatch(selectedDrawingObjects()[0]?.document, editingStyle));
       } else {
         preferences = normalizePrefs({...preferences, ...PRESETS[button.dataset.preset]});
         safeSave();
@@ -364,7 +389,7 @@ function createDock() {
       if (input.name === "fillColor" || input.name === "fillAlpha") draft.filled = true;
       if (mode.mode === "single") {
         editingStyle = normalizePrefs(draft);
-        queueDirectStylePatch(visibleArrowStylePatch(selectedDrawingObjects()[0]?.document,
+        queueDirectStylePatch(drawingAppearancePatch(selectedDrawingObjects()[0]?.document,
           editingStyle, input.name));
       } else {
         preferences = normalizePrefs(draft);
@@ -524,6 +549,16 @@ function toggleDock({activateDrawings = true} = {}) {
 
 async function selectTool(tool) {
   if (!dock || !isUsable()) return;
+  // Clicking a lit Select/Unselect control releases native canvas selection.
+  // The Select tool remains ready for another Drawing, without modifying artwork.
+  if (tool === "select" && canvas?.drawings?.active &&
+      selectedDrawingObjects().length && !arrowOverlay && !textOverlay) {
+    newDrawingSerial++;
+    canvas.drawings.releaseAll();
+    refreshSelectedPanel();
+    refreshToolHighlight();
+    return;
+  }
   newDrawingSerial++;
   if (tool === "arrow" || tool === "text") {
     try {
@@ -651,6 +686,7 @@ function documentCreate(tag, className) {
 function refreshSelectedPanel() {
   if (!dock) return;
   const selected = selectedDrawingObjects();
+  refreshToolHighlight();
   dock.classList.toggle("dqb-has-selection", Boolean(selected.length));
   dock.classList.toggle("dqb-can-revert", Boolean(lastStyleUndo));
   const selectedList = dock.querySelector(".dqb-selected-list");
@@ -965,7 +1001,7 @@ async function styleSelected() {
   const backups = selected.map(snapshotStyle);
   try {
     const result = await scene.updateEmbeddedDocuments("Drawing",
-      selected.map(d => ({_id: d.id, ...visibleArrowStylePatch(d, preferences)})));
+      selected.map(d => ({_id: d.id, ...drawingAppearancePatch(d, preferences)})));
     if (!result?.length) return notify("No Drawings were updated.");
     lastStyleUndo = {kind: "batch", sceneId: scene.id, documents: backups.filter(old => result.some(r => r.id === old._id))};
     updateDockInputs();
@@ -1320,12 +1356,21 @@ Hooks.once("ready", () => {
   preferences = normalizePrefs(game.settings.get(MODULE_ID, "preferences"));
   if (!canUseDrawingQuickbar(game.user)) return;
   Hooks.on("preCreateDrawing", (document, data, _options, userId) => {
-    if (shouldStyleNewDrawing({
-      open: !!dock, active: !!canvas?.drawings?.active, autoStyle: preferences.autoStyle,
+    const nativeTool = ui?.controls?.tool?.name;
+    const localNewDrawing = Boolean(dock && canvas?.drawings?.active &&
+      userId === game.user.id && !data?._id &&
+      canvas?.scene?.id && canvas.scene.id === document?.parent?.id);
+    if (!localNewDrawing) return;
+    const applyDefaults = shouldStyleNewDrawing({
+      open: true, active: true, autoStyle: preferences.autoStyle,
       userId, currentUserId: game.user.id, existingId: data?._id,
-      sceneId: canvas?.scene?.id, parentId: document?.parent?.id,
-      tool: ui?.controls?.tool?.name
-    })) document.updateSource(stylePatch(preferences));
+      sceneId: canvas.scene.id, parentId: document.parent.id, tool: nativeTool
+    });
+    if (nativeTool === "freehand") {
+      // Even with Apply Default Style disabled, native Pen must not be flood-filled.
+      document.updateSource(applyDefaults
+        ? penStylePatch(preferences) : {fillType: 0, fillAlpha: 0});
+    } else if (applyDefaults) document.updateSource(stylePatch(preferences));
   });
   Hooks.on("canvasReady", () => {lastStyleUndo = null; closeDock();});
   Hooks.on("deactivateDrawingsLayer", () => {
@@ -1333,6 +1378,7 @@ Hooks.once("ready", () => {
     exitTextPlacement();
   });
   Hooks.on("controlDrawing", () => queueMicrotask(refreshSelectedPanel));
+  Hooks.on("releaseDrawing", () => queueMicrotask(refreshSelectedPanel));
   Hooks.on("updateDrawing", refreshSelectedPanel);
   Hooks.on("createDrawing", (doc, _options, userId) => {
     refreshSelectedPanel();
