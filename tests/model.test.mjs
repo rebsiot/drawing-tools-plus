@@ -190,8 +190,8 @@ test('focused text editing patch changes only text and appearance, preserving lo
   const doc={id:'drawing-a',locked:false,x:10,y:20,
     shape:{type:'r',width:100,height:20},flags:{important:true},text:'a'};
   const original=structuredClone(doc);
-  const patch=editTextPatch(doc,'Very Rare Text Art',{fontSize:48,textColor:'#abcdef',textAlpha:1});
-  assert.deepEqual(patch,{_id:'drawing-a',text:'Very Rare Text Art',fontSize:48,textColor:'#abcdef'});
+  const patch=editTextPatch(doc,'Very Rare Text Art',{fontSize:48,textColor:'#abcdef'});
+  assert.deepEqual(patch,{_id:'drawing-a',text:'Very Rare Text Art',fontSize:48,textColor:'#abcdef',textAlpha:1});
   assert.equal('shape' in patch,false);
   assert.equal('x' in patch,false);
   assert.equal('flags' in patch,false);
