@@ -15,8 +15,8 @@ test("native local creation switches to Select and focuses only its own new Draw
 });
 test("direct single style editing targets one ID and never touches locked Drawings", async () => {
   const s=await readFile(new URL("../scripts/main.js",import.meta.url),"utf8");
-  assert.match(s,/queueDirectStylePatch\(singleStylePatch\(input\.name, editingStyle\)\)/);
-  assert.match(s,/queueDirectStylePatch\(stylePatch\(editingStyle\)\)/);
+  assert.match(s,/queueDirectStylePatch\(visibleArrowStylePatch\(selectedDrawingObjects\(\)\[0\]\?\.document,\s*editingStyle, input\.name\)\)/);
+  assert.match(s,/queueDirectStylePatch\(visibleArrowStylePatch\(selectedDrawingObjects\(\)\[0\]\?\.document, editingStyle\)\)/);
   assert.match(s,/scene\.drawings\.get\(pending\.id\)/);
   assert.match(s,/if \(!doc \|\| doc\.locked/);
   assert.match(s,/\[\{_id: doc\.id, \.\.\.pending\.patch\}\]/);

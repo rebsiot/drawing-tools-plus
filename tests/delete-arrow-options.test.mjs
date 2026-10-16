@@ -5,8 +5,8 @@ import {readFile} from "node:fs/promises";
 test('Remove was just Deselect; permanent Delete has separate confirmation and strict lock guard', async () => {
   const s=await readFile(new URL("../scripts/main.js",import.meta.url),"utf8");
   assert.match(s,/action === "select-only" \? "Select" : "Deselect"/);
-  assert.match(s,/data\.action === "deselect-one"/);
-  assert.match(s,/data\.action === "delete-one"\) await deleteOneDrawing/);
+  assert.match(s,/button\.dataset\.action === "deselect-one"/);
+  assert.match(s,/button\.dataset\.action === "delete-one"\) await deleteOneDrawing/);
   assert.match(s,/function deleteOneDrawing\(id\)/);
   assert.match(s,/DialogV2\?\.confirm/);
   assert.match(s,/deleteEmbeddedDocuments\("Drawing", \[id\]\)/);
