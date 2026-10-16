@@ -7,6 +7,8 @@ import {
 } from "./model.js";
 import {TUTORIAL_STEPS, TUTORIAL_DISMISSED_FLAG, shouldAutoShowTutorial, tutorialStepIndex}
   from "./tutorial.js";
+import {canUseDrawingQuickbar, canSeeDrawing, canChangeDrawing}
+  from "./access.js";
 
 const TOOLS = new Set(["select", "rect", "ellipse", "polygon", "freehand", "text"]);
 const KEY_TO_TOOL = {v: "select", r: "rect", e: "ellipse", p: "polygon", f: "freehand", t: "text", a: "arrow"};
@@ -43,8 +45,11 @@ function notify(message, type = "warn") {
   n?.[type]?.(`[Drawing Quickbar] ${message}`);
 }
 function isUsable() {
-  return Boolean(game?.user?.isGM && canvas?.ready && canvas?.scene && canvas?.drawings && ui?.controls);
+  return Boolean(canUseDrawingQuickbar(game?.user) &&
+    canvas?.ready && canvas?.scene && canvas?.drawings && ui?.controls);
 }
+function canEdit(doc) { return canChangeDrawing(game?.user, doc, "update"); }
+function canDelete(doc) { return canChangeDrawing(game?.user, doc, "delete"); }
 function safeSave() {
   // Coalesce rapid color/range input events into one client setting write.
   clearTimeout(saveTimer);
@@ -67,7 +72,8 @@ function renderStyleInputs() {
   dock.querySelector('[name="arrowEnds"]').value = preferences.arrowEnds;
   dock.querySelector('[name="arrowHeadShape"]').value = preferences.arrowHeadShape;
   const selected = selectedDrawingObjects();
-  const selectedArrow = selected.length === 1 && isQuickbarArrow(selected[0]?.document);
+  const selectedArrow = selected.length === 1 &&
+    canEdit(selected[0]?.document) && isQuickbarArrow(selected[0]?.document);
   const width = dock.querySelector('[name="strokeWidth"]');
   if (width) {
     width.disabled = selectedArrow;
@@ -87,7 +93,9 @@ function updateDockInputs() {
   refreshSelectedPanel();
 }
 function synchronizeStyleTarget(selected) {
-  const mode = styleTargetMode(selected.map(item => item.document));
+  const mode = styleTargetMode(selected.map(item => ({
+    id: item.document.id, locked: !canEdit(item.document)
+  })));
   const id = mode.mode === "single" ? mode.id : null;
   if (id !== editingDrawingId) {
     editingDrawingId = id;
@@ -102,7 +110,9 @@ function synchronizeStyleTarget(selected) {
       : "Editing this Drawing now. Changes apply immediately.")
     : mode.mode === "batch"
       ? `${mode.count} unlocked selected. Adjust the controls, then Apply to All Selected.`
-      : "Setting new-Drawing defaults. Presets are built in; no saving required.";
+      : selected.length && !selected.some(item => canEdit(item.document))
+        ? "Read-only: you can edit only your own unlocked Drawings."
+        : "Setting new-Drawing defaults. Presets are built in; no saving required.";
   const button = dock.querySelector('[data-action="apply-selected"]');
   if (button) {
     button.textContent = mode.mode === "batch"
@@ -113,7 +123,8 @@ function synchronizeStyleTarget(selected) {
 function queueDirectStylePatch(patch) {
   if (!patch || !isUsable() || !canvas.drawings.active) return;
   const selected = selectedEditableObjects();
-  if (selected.length !== 1 || selectedDrawingObjects().length !== 1) return;
+  if (selected.length !== 1 || selectedDrawingObjects().length !== 1 ||
+      !canEdit(selected[0].document)) return;
   const id = selected[0].document.id, sceneId = canvas.scene.id;
   if (pendingStyle && (pendingStyle.id !== id || pendingStyle.sceneId !== sceneId))
     void flushDirectStylePatch();
@@ -133,7 +144,7 @@ async function flushDirectStylePatch() {
     const scene = canvas?.scene;
     if (!scene || scene.id !== pending.sceneId) return;
     const doc = scene.drawings.get(pending.id);
-    if (!doc || doc.locked || !game?.user?.isGM) return;
+    if (!canEdit(doc)) return;
     const before = snapshotStyle(doc);
     try {
       const updated = await scene.updateEmbeddedDocuments("Drawing", [{_id: doc.id, ...pending.patch}]);
@@ -288,7 +299,9 @@ function createDock() {
     if (!button || !root.contains(button)) return;
     if (button.dataset.tool) return selectTool(button.dataset.tool);
     if (button.dataset.preset) {
-      const mode = styleTargetMode(selectedDrawingObjects().map(item => item.document));
+      const mode = styleTargetMode(selectedDrawingObjects().map(item => ({
+        id: item.document.id, locked: !canEdit(item.document)
+      })));
       if (mode.mode === "single") {
         editingStyle = normalizePrefs({...activeStyle(), ...PRESETS[button.dataset.preset]});
         queueDirectStylePatch(visibleArrowStylePatch(selectedDrawingObjects()[0]?.document, editingStyle));
@@ -343,7 +356,9 @@ function createDock() {
       preferences.autoStyle = input.checked;
       safeSave();
     } else {
-      const mode = styleTargetMode(selectedDrawingObjects().map(item => item.document));
+      const mode = styleTargetMode(selectedDrawingObjects().map(item => ({
+        id: item.document.id, locked: !canEdit(item.document)
+      })));
       const existing = mode.mode === "single" ? activeStyle() : preferences;
       const draft = {...existing, [input.name]: value};
       if (input.name === "fillColor" || input.name === "fillAlpha") draft.filled = true;
@@ -573,7 +588,9 @@ function selectedDrawingObjects() {
 }
 function sceneDrawingDocuments() {
   const drawings = canvas?.scene?.drawings;
-  return drawings?.contents ?? [...(drawings ?? [])];
+  const all = drawings?.contents ?? [...(drawings ?? [])];
+  // Do not leak GM-hidden Drawing annotations through the player's inventory.
+  return all.filter(doc => canSeeDrawing(game?.user, doc));
 }
 function makeActionButton(doc, action, title, label) {
   const button = documentCreate("button", "dqb-mini");
@@ -601,22 +618,25 @@ function makeObjectRow(document, action, title, finder = false) {
   const place = finder && Number.isFinite(document.x) && Number.isFinite(document.y)
     ? ` · ${Math.round(document.x)}, ${Math.round(document.y)}` : "";
   sub.textContent = label.kind + (label.locked ? " · Locked" : "") +
-    (document.hidden ? " · Hidden" : "") + place;
+    (document.hidden ? " · Hidden" : "") +
+    (!game.user.isGM ? (canEdit(document) ? " · Yours" : " · View only") : "") + place;
   const summary = documentCreate("span", "dqb-object-summary");
   summary.append(details, sub);
   const actions = documentCreate("span", "dqb-object-controls");
   actions.append(makeActionButton(document, "locate-one", "Pan and highlight", "Locate"));
-  if (action) {
+  if (action && (action === "deselect-one" ||
+      (action === "unlock-one" && game.user.isGM) ||
+      (action === "select-only" && canEdit(document)))) {
     const buttonTitle = action === "select-only" ? "Select only this Drawing (clear other selections)" : title;
     const buttonText = action === "unlock-one" ? "Unlock" :
       action === "select-only" ? "Select" : "Deselect";
     actions.append(makeActionButton(document, action, buttonTitle, buttonText));
   }
-  if (finder && !document.locked) {
+  if (finder && canEdit(document)) {
     actions.append(makeActionButton(document, "edit-one-text",
       textPreview ? "Edit Drawing text" : "Add a text label to this Drawing", "Text"));
   }
-  if (!document.locked && (finder || action === "deselect-one")) {
+  if (canDelete(document) && (finder || action === "deselect-one")) {
     actions.append(makeActionButton(document, "delete-one",
       "Delete this native Drawing after confirmation; Undo Style cannot restore it", "Delete"));
   }
@@ -640,16 +660,18 @@ function refreshSelectedPanel() {
   selectedList.replaceChildren(...(selected.length
     ? selected.map(item => makeObjectRow(item.document, "deselect-one", "Deselect drawing"))
     : [Object.assign(documentCreate("p", "dqb-empty"), {textContent: "No drawings selected"})]));
-  const editable = selected.filter(item => !item.document.locked);
+  const editable = selected.filter(item => canEdit(item.document));
   synchronizeStyleTarget(selected);
-  for (const action of ["lock-selected", "duplicate-selected"]) {
-    dock.querySelector('[data-action="' + action + '"]').disabled = !editable.length;
-  }
+  const lockButton = dock.querySelector('[data-action="lock-selected"]');
+  lockButton.hidden = !game.user.isGM;
+  lockButton.disabled = !game.user.isGM || !editable.length;
+  dock.querySelector('[data-action="duplicate-selected"]').disabled = !editable.length;
   for (const action of ["edit-text", "open-properties"]) {
     dock.querySelector('[data-action="' + action + '"]').disabled =
       selected.length !== 1 || editable.length !== 1;
   }
-  const locked = sceneDrawingDocuments().filter(doc => doc?.locked).sort((a,b) =>
+  dock.querySelector(".dqb-locked").hidden = !game.user.isGM;
+  const locked = (game.user.isGM ? sceneDrawingDocuments() : []).filter(doc => doc?.locked).sort((a,b) =>
     drawingLabel(a).name.localeCompare(drawingLabel(b).name));
   dock.querySelector('[data-value="locked-count"]').textContent = String(locked.length);
   lockedList.replaceChildren(...(locked.length
@@ -688,7 +710,7 @@ async function selectOnlyDrawing(id) {
   if (!isUsable()) return;
   const sceneId = canvas.scene.id;
   const doc = canvas.scene.drawings.get(id);
-  if (!doc || doc.locked) return notify("Unlock this Drawing before selecting it.");
+  if (!canEdit(doc)) return notify("You can select only your own unlocked Drawings.");
   try {
     // Explicitly selecting a Drawing from Tokens is the point we change layers.
     if (!canvas.drawings.active) await ui.controls.activate({control: "drawings", tool: "select"});
