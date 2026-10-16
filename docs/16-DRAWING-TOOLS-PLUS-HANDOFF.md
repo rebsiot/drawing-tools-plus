@@ -172,6 +172,23 @@ v0.1.3 supersedes v0.1.2 and places the Selected Drawings inspector/Lock actions
 
 **Owned handoff:** `docs/16-DRAWING-TOOLS-PLUS-HANDOFF.md`. Foundry v14, independent `foundry-drawing-quickbar` v0.1.11, same manifest and restrictive license. No adjacent module changes. Outstanding Background/Working layer-grouping design remains Issue #1.
 
+## 16.1 update — v0.1.12: additive native multi-selection (2026-10-16)
+
+**User intent:** Do not add a second selection mode or more selection controls. Simply allow clicking **Select** on more than one Drawing in **All Drawings**, keeping earlier selected Drawings controlled. A selected item's button should become **Deselect**, removing only that one; existing main **Unselect** clears everything.
+
+**Source-verified root cause:** v0.1.11 Finder's `selectOnlyDrawing(id)` unconditionally called `canvas.drawings.releaseAll()` and `placeable.control({releaseOthers:true})`. That implementation could never retain multiple controlled Drawings. Foundry v14's native `PlaceableObject.control({releaseOthers:false})` adds to the controlled set, and `release()` removes just the target.
+
+**Implementation (v0.1.12 beta; pending live v14 test):**
+- Replace Finder action `select-only` with `toggle-one`, reusing existing row buttons; no additional toolbar buttons or separate selection state.
+- New small pure/native helper `scripts/selection.js` invokes `control({releaseOthers:false})` to add and `release()` to remove. `toggleDrawingSelection` transitions from Tokens or another tool to native Drawings Select if needed, and rechecks Scene, exact Drawing identity, and `canEdit(doc)` after that transition.
+- All Drawings rows reflect native `placeable.controlled` state with a Select/Deselect label, `aria-pressed`, and subtle selected indication. Existing selected count/list and **Apply to N Selected** flow already handle multiple controlled Drawings; main Unselect still calls native `releaseAll()` explicitly.
+- Neither the helper nor Finder selection creates/updates/deletes native Scene Documents. Locked, GM-hidden, and player-unowned Drawings remain protected by existing author/permission and visibility checks. GM Locked Drawings remains separate Info/Unlock.
+- Update the four-step opt-in tutorial and README, add actual mock native additive/release tests plus source wiring tests, run the existing release/manifest tests and syntax-check selection.js in both CI workflows.
+
+**Live smoke test:** Back up the world, on a disposable Scene expand All Drawings and select A then B then C; verify count 3 and all three native control outlines, and each row says Deselect. Deselect B; verify A/C remain. Apply Highlight to remaining two; verify B and locked gridlines unchanged. Press main Unselect; count must be 0. For player, try GM and another player's Drawings, which must remain view-only. From Tokens, select first row to switch to Drawings, then add the second without switching away.
+
+**Ownership and continuity:** `foundry-drawing-quickbar` v0.1.12; stable Foundry manifest, no migration/format/API change; source still on GitHub. Previous v0.1.11 ZIP stays the rollback target. Live Foundry verification must not be asserted from Node/mock tests.
+
 ## Source of truth and GitHub release boundaries
 
 - Use the actual GitHub source at `rebsiot/drawing-tools-plus` (default branch `main`) and/or the newest verified working ZIP. Handoff notes describe intent but are not code.

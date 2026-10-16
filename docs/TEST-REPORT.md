@@ -1,6 +1,14 @@
-# Test Report — Drawing Quickbar v0.1.11
+# Test Report — Drawing Quickbar v0.1.12
 
 **Date:** 2026-10-16
+
+## v0.1.12 — Additive multi-selection via All Drawings (2026-10-16)
+
+**Cause identified in working source:** `selectOnlyDrawing` always cleared native controlled Drawings via `releaseAll()` before controlling the next one with `releaseOthers:true`. Native Foundry v14 provides `PlaceableObject.control({releaseOthers:false})` for non-destructive additive selection and `release()` for individual deselection.
+
+**New automated tests:** Native mock Placeables A/B/C: Select each, confirm all remain controlled, Deselect B, confirm A/C remain, then reselect B. Failure/no-placeable cases fail closed. Source tests assert native additive API, authorization before and after async layer change, one button per list row with Select/Deselect+aria-pressed, existing main Unselect remains, no Scene data mutation in Finder helper. Existing cross-version release metadata and ZIP tests remain active.
+
+**Live Foundry verification pending:** Actual v14 Drawing layer/DOM, All Drawings row state and count, batch style targeting and locked-gridline protection. No observed live test result from this release yet.
 
 ## v0.1.11 — Player permissions, compact controls and Pen fixes (2026-10-16)
 

@@ -1,4 +1,4 @@
-# Drawing Tools+ — v0.1.11 Beta
+# Drawing Tools+ — v0.1.12 Beta
 
 **Foundry:** v14 · **Module ID:** `foundry-drawing-quickbar` · **License:** [Personal Use Only (No Redistribution)](LICENSE.md)
 
@@ -7,8 +7,8 @@ A small floating toolbar for **native Foundry Scene Drawings**. No extra drawing
 ## Core workflow
 
 - **Compact tools:** Select, Pen, Box, Circle, Polygon and Text fit on one row; Arrow sits directly below. Pen creates an **open stroke with no fill**, even when the current preset is Filled.
-- **Clear selection:** Select becomes **Unselect** and lights up when a native Drawing is selected. Click it again to release the selection. The Drawing is not deleted or restyled, and pressing `V` still activates native Select.
-- **Appearance:** Stroke/Fill/Text colors and Line width, Fill opacity, Text size sliders. Slider rows are closer together. One selected unlocked Drawing is styled immediately; multi-selection requires **Apply to N Selected**. Pen strokes cannot be filled; arrow silhouettes remain visible.
+- **Select several Drawings:** Expand **All Drawings** and click **Select** next to each Drawing you want. Earlier selections stay selected, and each selected row changes to **Deselect**; click it to remove only that Drawing. There's no extra multi-select mode or keyboard modifier. The main **Unselect** button releases the full selection, and `V` still activates native Select without clearing it.
+- **Appearance:** Stroke/Fill/Text colors and Line width, Fill opacity, Text size sliders. Slider rows are closer together. One selected unlocked Drawing is styled immediately; with several Drawings selected, choose a preset or edit settings, then click **Apply to N Selected**. No bulk deletion is triggered. Pen strokes cannot be filled; arrow silhouettes remain visible.
 - **Selected details:** Lock/Properties/Duplicate/Edit Text and other actions appear **above** the selected-Drawing list, so the selected object stays near its controls.
 - **Find and protect:** Expand **All Drawings** to search, Locate, Select, add text or Delete an eligible item. The GM's **Locked Drawings** list includes **Info** for read-only inspection and Locate/Unlock. Locked native Drawings cannot be selected or edited until explicitly unlocked.
 - **Arrows and text:** Arrows support Start/End/Both/No heads, plus Triangle/Diamond/Chevron silhouettes. Text uses a focused dialog. Deselect never deletes; Delete requires confirmation. **Undo Style Change** restores appearance only.
@@ -42,17 +42,18 @@ On a disposable Scene with copied/temporary art:
 
 1. Confirm the first six tools fit on one row, Arrow is beneath them, selected details follow the action buttons, and the three sliders have reduced vertical gaps.
 2. Select **Filled**, then **Pen**. Draw a curved, open path. Confirm its endpoints are not connected, it has no filled interior and the stroke survives a refresh. Restyle the stroke with Outline or Danger.
-3. Select a test circle. Confirm **Unselect** lights up; click it to deselect. The shape and its appearance must remain unchanged. Select it again.
-4. GM: lock an expendable Drawing. Use **Locked Drawings → Locate / Info** without selecting or unlocking. Verify the Info window is read-only. Unlock only when intended.
-5. Player with **Use Drawing Tools** enabled: draw a shape, then style, move and delete that shape. Confirm the player cannot change GM artwork, another player's art, or a locked map gridline. Repeat with the player tutorial.
-6. Check the Text dialog and arrows, Undo Style Change, a large All Drawings list, and that no selection/delete action rewrites protected gridlines.
+3. Expand **All Drawings** and click **Select** on two or three unlocked test Drawings. Verify each remains selected, and the button in each row becomes **Deselect**. Click Deselect on the second: the others must stay selected. Choose a preset and click **Apply to N Selected**; verify only the remaining selected Drawings change.
+4. Click the main **Unselect** control: all Drawings should become deselected, but their positions and styles must not change.
+5. GM: lock an expendable Drawing. Use **Locked Drawings → Locate / Info** without selecting or unlocking. Verify the Info window is read-only. Unlock only when intended.
+6. Player with **Use Drawing Tools** enabled: draw a shape, then style, move and delete that shape. Confirm the player cannot change GM artwork, another player's art, or a locked map gridline. Repeat with the player tutorial.
+7. Check the Text dialog and arrows, Undo Style Change, a large All Drawings list, and that no selection/delete action rewrites protected gridlines.
 
-Report the exact Foundry v14 build and the **first browser console error** if a test fails. The new code has automated/unit/mock tests and ZIP packaging checks; **the GM/player interactions and freehand renderer have not been verified live on your Foundry instance**.
+Report the exact Foundry v14 build and the **first browser console error** if a test fails. The new code has automated/unit/mock tests and ZIP packaging checks; **the new additive selection interaction and earlier GM/player/Pen behavior have not been verified live on your Foundry instance**.
 
 ## Known limits and rollback
 
 The Quickbar uses native Drawing documents and native permissions. It does not provide custom user-named style libraries, grouping/layer replacement, advanced snapping, or a separate undo history. Background/Working groups remain planned, not implemented.
 
-To revert module code, install [v0.1.10](https://github.com/rebsiot/drawing-tools-plus/releases/tag/v0.1.10). This does **not** undo saved Scene document changes or restore deleted Drawings—keep your matching world backup.
+To revert module code, install [v0.1.11](https://github.com/rebsiot/drawing-tools-plus/releases/tag/v0.1.11). This does **not** undo saved Scene document changes or restore deleted Drawings—keep your matching world backup.
 
-[Readable Changelog](CHANGELOG.md) · [Release Notes](docs/releases/v0.1.11.md) · [Tests](docs/TEST-REPORT.md) · [Development Handoff](docs/16-DRAWING-TOOLS-PLUS-HANDOFF.md)
+[Readable Changelog](CHANGELOG.md) · [Release Notes](docs/releases/v0.1.12.md) · [Tests](docs/TEST-REPORT.md) · [Development Handoff](docs/16-DRAWING-TOOLS-PLUS-HANDOFF.md)

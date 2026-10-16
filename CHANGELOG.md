@@ -2,6 +2,13 @@
 
 Short summaries of changes you can see in Foundry. See the [test report](docs/TEST-REPORT.md) for technical verification.
 
+## v0.1.12 — Multi-Select from All Drawings
+- **Fixed:** Clicking **Select** on another All Drawings row adds it to the current native selection instead of clearing previously selected Drawings.
+- **Simpler:** Each selected row changes to **Deselect**, which releases only that Drawing; main **Unselect** clears all selected Drawings. No separate mode or modifier keys.
+- **Works with:** Existing **Apply to N Selected** styling, GM-only Lock, and native drawing move/resize where Foundry allows it.
+- **Protected:** Player-owned, locked and hidden Drawing permissions remain enforced. List selection never modifies Scene documents or performs deletion.
+- **Testing:** Native Foundry PlaceableObject control/release API and Node/mock regression checks; live Foundry v14 verification is still required.
+
 ## v0.1.11 — Player Drawings, Pen Fix and a Smaller Toolbar
 - **New:** Player-accessible Quickbar when the GM enables Foundry's **Use Drawing Tools** permission. A player can manage **their own unlocked** Drawings only; all writes recheck native author and update/delete permissions. GM control remains.
 - **Fixed:** Pen paths remain **unfilled open freehand strokes**. The Quickbar ignores fill presets for freehand shapes and disables Fill controls on selected Pen paths.
