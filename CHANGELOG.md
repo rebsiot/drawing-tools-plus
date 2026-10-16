@@ -2,6 +2,13 @@
 
 Short summaries of changes you can see in Foundry. See the [test report](docs/TEST-REPORT.md) for technical verification.
 
+## v0.1.10 — Quick First-Use Tutorial
+- **New:** Four short steps appear the first time a GM opens Drawing Quickbar—not simply when they log into Foundry.
+- **New:** **Don't Show Again** at the end saves the preference on that GM's Foundry User account, across future sessions and browsers in the same world.
+- **Simple:** Back, Next, Not now and Escape. Not now postpones the reminder to a later login rather than nagging during the current session.
+- **Always available:** A small **Tutorial** link in the Quickbar footer reopens the guide on demand.
+- **Safe:** No changes to Scenes, Drawings, Tokens, module permissions or existing settings. No automatic migrations.
+
 ## v0.1.9 — Delete Confirmation and Arrowhead Shapes
 - **Fixed:** Delete confirmation no longer errors with `Cannot read properties of undefined (reading 'wait')`; the Foundry v14 dialog method is called with its required class context.
 - **Improved:** Arrow options are hidden until the **Arrow** tool is active; they disappear when switching tools or selecting a completed arrow.

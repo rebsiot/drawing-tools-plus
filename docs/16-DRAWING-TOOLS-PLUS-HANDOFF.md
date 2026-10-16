@@ -138,6 +138,22 @@ v0.1.3 supersedes v0.1.2 and places the Selected Drawings inspector/Lock actions
 
 **Stable ID/contract:** `foundry-drawing-quickbar`, Foundry v14 target, same live manifest, restrictive license, prior v0.1.8 ZIP as rollback. No cross-module changes. Owning handoff: `docs/16-DRAWING-TOOLS-PLUS-HANDOFF.md`, global release/testing documents unchanged.
 
+## 16.1 update — v0.1.10: first-use GM tutorial and per-account opt-out (2026-10-16)
+
+**Request:** A quick tutorial when someone first encounters the Drawing Quickbar, with **Don't Show Again** at the end.
+
+**Implementation grounded in current v0.1.9 source:**
+- Four short steps cover tools and Token launch, selected-Drawing appearance, All Drawings/Locate/locking/confirmation, Arrow options and appearance-only Undo.
+- On the **first successful Quickbar opening** as GM, show a native HTML dialog. Do not interrupt the Foundry login or display a guide to player accounts. Both Tokens and Drawings launchers share the flow.
+- Back/Next/Not now, browser Escape/close, and **Don't Show Again** on the final step. Not now avoids repeated popups in the same login without saving an opt-out.
+- Final opt-out writes only `game.user.setFlag("foundry-drawing-quickbar", "tutorialDismissed", true)`; next login calls `getFlag` on the GM account. This flag is per User document within the Foundry world and follows that GM across browsers. Errors in saving are explicitly reported and do not pretend success.
+- Small secondary footer **Tutorial** link reopens the guide on demand, even after permanent opt-out.
+- Native dialog handles focus and Escape; drawing hotkeys are suppressed during the tutorial. Closing Quickbar disposes the modal.
+- No Scene/Actor/Token/Drawing data updates, module renaming, data migrations, or changes to player access. Added `scripts/tutorial.js`, matching CSS, Node regression coverage, versioned ZIP and readable release notes.
+- **First live check:** Open Quickbar as a GM on a disposable Scene, verify steps and Not now; reopen this login without a popup; refresh/relogin, choose Don't Show Again on last step; refresh and reopen and confirm hidden. Reopen via Tutorial, verify a second GM has independent state, and confirm browser console and world data are unchanged.
+
+**Status:** v0.1.10 beta is subject to automated/mock CI and real v14 verification. Owning handoff remains `docs/16-DRAWING-TOOLS-PLUS-HANDOFF.md`; no shared data contract changes.
+
 ## Source of truth and GitHub release boundaries
 
 - Use the actual GitHub source at `rebsiot/drawing-tools-plus` (default branch `main`) and/or the newest verified working ZIP. Handoff notes describe intent but are not code.

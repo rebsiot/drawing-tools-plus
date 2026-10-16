@@ -1,6 +1,16 @@
-# Test Report — Drawing Quickbar v0.1.9
+# Test Report — Drawing Quickbar v0.1.10
 
 **Date:** 2026-10-16
+
+## v0.1.10 — First-Use GM Tutorial (2026-10-16)
+
+**Baseline:** Actual main-branch v0.1.9 source at commit `7b013457b54877cb201c1c60c6f29ea3ea00540d`, with CI Node 24 action upgrades applied. No live Foundry browser is accessible from development tools.
+
+**Automated checks added:** Four concise tutorial steps; pure Back/Next step logic; GM-only first-open/one-session suppression predicate; per-account Foundry User `getFlag/setFlag` wiring; final-step opt-out only; manual footer reopening; native dialog show/close and keyboard shortcut guard; static evidence that guide functions never create/update/delete Scene documents. Manifest, license and ZIP metadata remain covered.
+
+**Data safety:** The tutorial does not edit Scenes, Tokens, Actors, or Drawings. Only accepting the final opt-out writes a boolean to the current GM User document's namespaced flag.
+
+**Live Foundry verification still required:** Native dialog visual/focus behavior in Foundry v14, Back/Next/Not now/Esc, first-open across both Token/Drawings controls, opting out across logins and browser sessions, and independent preferences for separate GM accounts.
 
 ## v0.1.9 — Delete confirmation fix and contextual arrow options (2026-10-16)
 
