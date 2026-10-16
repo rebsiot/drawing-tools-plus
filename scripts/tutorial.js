@@ -14,7 +14,7 @@ export const TUTORIAL_STEPS = Object.freeze([
   }),
   Object.freeze({
     title: "Find and protect your map art",
-    body: "Expand All Drawings to search or Locate a tiny marking. Lock permanent gridlines and annotations, and use Locked Drawings when you need to unlock them. Deselect does not delete; Delete requires confirmation."
+    body: "Expand All Drawings to search or Locate a marking. Players can edit and delete only their own unlocked Drawings. The GM can lock permanent gridlines and unlock protected map art. Deselect never deletes; Delete asks for confirmation."
   }),
   Object.freeze({
     title: "Arrows, undo and getting help",
@@ -22,8 +22,8 @@ export const TUTORIAL_STEPS = Object.freeze([
   })
 ]);
 
-export function shouldAutoShowTutorial({isGM, hasDock, shownThisSession, dismissed}) {
-  return Boolean(isGM && hasDock && !shownThisSession && dismissed !== true);
+export function shouldAutoShowTutorial({isGM, canUse = isGM, hasDock, shownThisSession, dismissed}) {
+  return Boolean(canUse && hasDock && !shownThisSession && dismissed !== true);
 }
 
 export function tutorialStepIndex(current, direction) {

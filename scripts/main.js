@@ -480,7 +480,7 @@ function maybeOfferTutorial() {
     console.warn(`${MODULE_ID} | Could not read the tutorial preference`, error);
   }
   if (shouldAutoShowTutorial({
-    isGM: game.user.isGM, hasDock: Boolean(dock),
+    canUse: canUseDrawingQuickbar(game.user), hasDock: Boolean(dock),
     shownThisSession: tutorialShownThisSession, dismissed
   })) showTutorial();
 }
