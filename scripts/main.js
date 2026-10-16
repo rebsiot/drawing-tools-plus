@@ -123,7 +123,7 @@ function synchronizeStyleTarget(selected) {
   if (hint) hint.textContent = mode.mode === "single"
     ? (isQuickbarArrow(selected[0]?.document)
       ? (selected[0]?.document?.shape?.type === "f"
-          ? "Chevron has open V heads: line color and width remain editable."
+          ? "Chevron head: selected Drawing appearance follows its native shape."
           : "Arrow appearance: color and opacity. Thickness is set when drawn.")
       : selected[0]?.document?.shape?.type === "f"
         ? "Pen stroke: line color and width. Freehand remains unfilled."
@@ -290,7 +290,7 @@ function createDock() {
           <select name="arrowHeadShape" aria-label="Arrowhead shape for new arrows">
             <option value="triangle">Filled triangle (default)</option>
             <option value="diamond">Diamond</option>
-            <option value="chevron">Chevron</option>
+            <option value="chevron">Notched chevron (V)</option>
           </select>
         </label>
         <small>These options apply to the next arrow, not existing Drawings.</small>
@@ -1224,7 +1224,7 @@ function drawArrowPreview(point) {
       vertices = arrowPoints(arrowStart.screen, point,
         Math.max(14, preferences.strokeWidth * 5), preferences.strokeWidth,
         preferences.arrowEnds, preferences.arrowHeadShape);
-      closed = preferences.arrowHeadShape !== "chevron";
+      // All Arrow head variants are valid native closed polygon silhouettes.
     } else vertices = ribbonVertices([arrowStart.screen, point], preferences.strokeWidth);
   }
   path.setAttribute("d", vertices
