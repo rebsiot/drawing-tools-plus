@@ -18,8 +18,8 @@ test("direct single style editing targets one ID and never touches locked Drawin
   assert.match(s,/queueDirectStylePatch\(visibleArrowStylePatch\(selectedDrawingObjects\(\)\[0\]\?\.document,\s*editingStyle, input\.name\)\)/);
   assert.match(s,/queueDirectStylePatch\(visibleArrowStylePatch\(selectedDrawingObjects\(\)\[0\]\?\.document, editingStyle\)\)/);
   assert.match(s,/scene\.drawings\.get\(pending\.id\)/);
-  assert.match(s,/if \(!doc \|\| doc\.locked/);
+  assert.match(s,/if \(!canEdit\(doc\)\) return/);
   assert.match(s,/\[\{_id: doc\.id, \.\.\.pending\.patch\}\]/);
-  assert.match(s,/all\.map\(item => item\.document\)\.filter\(d => d\?\.id && !d\.locked\)/);
+  assert.match(s,/all\.map\(item => item\.document\)\.filter\(canEdit\)/);
   assert.doesNotMatch(s,/> Style Selected<\/button>/);
 });

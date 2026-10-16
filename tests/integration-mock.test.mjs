@@ -51,8 +51,18 @@ test('v14 lifecycle registers a GM-only native control and never mutates drawing
   const playerControls = {drawings:{tools:{}},tokens:{tools:{}}};
   handlers.get('getSceneControlButtons')(playerControls);
   assert.equal(playerControls.tokens.tools.drawingQuickbar, undefined, 'No player Token launcher');
-  assert.equal(playerControls.drawings.tools.drawingQuickbar, undefined, 'No player Drawing launcher');
+  assert.equal(playerControls.drawings.tools.drawingQuickbar, undefined,
+    'Players without native Drawing permission cannot launch Quickbar');
+  game.user.id = 'player-1';
+  game.user.can = name => name === 'DRAWING_CREATE';
+  const allowedPlayerControls = {tokens:{tools:{}},drawings:{tools:{}}};
+  handlers.get('getSceneControlButtons')(allowedPlayerControls);
+  assert.ok(allowedPlayerControls.tokens.tools.drawingQuickbar,
+    'Player with Foundry Use Drawing Tools permission receives Token launcher');
+  assert.ok(allowedPlayerControls.drawings.tools.drawingQuickbar,
+    'Player with Foundry Use Drawing Tools permission receives Drawing launcher');
   game.user.isGM = true;
+  game.user.id = 'gm';
   once.get('ready')();
   assert.ok(handlers.has('controlDrawing'), 'Selection UI tracks native controlDrawing changes');
   assert.ok(handlers.has('updateDrawing'), 'Locked status updates are observed');

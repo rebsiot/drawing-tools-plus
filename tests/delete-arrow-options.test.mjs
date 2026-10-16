@@ -14,10 +14,10 @@ test('Remove was just Deselect; permanent Delete has separate confirmation and s
   assert.doesNotMatch(s,/const confirm = foundry\?\.applications\?\.api\?\.DialogV2\?\.confirm/,
     "Never detach the class method: this.wait would throw");
   assert.match(s,/deleteEmbeddedDocuments\("Drawing", \[id\]\)/);
-  assert.match(s,/if \(doc\.locked\) return notify/);
+  assert.match(s,/if \(!canDelete\(doc\)\) return notify/);
   assert.match(s,/approved !== true/);
   assert.match(s,/scene\.drawings\.get\(id\) !== doc/);
-  assert.match(s,/if \(!document\.locked && \(finder \|\| action === "deselect-one"\)\)/);
+  assert.match(s,/if \(canDelete\(document\) && \(finder \|\| action === "deselect-one"\)\)/);
   assert.match(s,/Undo Style Change/);
   assert.doesNotMatch(s,/\bRevert Style<\/button>/);
 });

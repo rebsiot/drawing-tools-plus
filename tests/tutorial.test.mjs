@@ -28,6 +28,8 @@ test("only GM first-use gets the welcome guide; user flag suppresses it", () => 
   assert.equal(shouldAutoShowTutorial({...base, shownThisSession:true}), false);
   assert.equal(shouldAutoShowTutorial({...base, hasDock:false}), false);
   assert.equal(shouldAutoShowTutorial({...base, isGM:false}), false);
+  assert.equal(shouldAutoShowTutorial({...base, isGM:false, canUse:true}), true,
+    'A permitted player gets the same first-use tutorial');
 });
 
 test("Back and Next stay within four steps", () => {
