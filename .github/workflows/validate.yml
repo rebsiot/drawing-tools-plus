@@ -18,6 +18,7 @@ jobs:
         run: |
           node --check scripts/main.js
           node --check scripts/model.js
+          node --check scripts/tutorial.js
       - name: Run automated tests
         run: npm test
       - name: Build complete module package
