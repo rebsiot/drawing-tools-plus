@@ -3,7 +3,7 @@ import {
   snapshotStyle, arrowPoints, arrowDocumentData, duplicateDrawingData, textDocumentData,
   drawingLabel, drawingCenter, findSceneDrawings, filterLockedDrawings, editTextPatch,
   stylePreferencesFromDrawing, singleStylePatch, styleTargetMode, drawingAppearancePatch,
-  penStylePatch, isQuickbarArrow,
+  penStylePatch, isQuickbarArrow, isQuickbarSilhouette,
   shouldRunDrawingShortcut, shouldStyleNewDrawing
 } from "./model.js";
 import {TUTORIAL_STEPS, TUTORIAL_DISMISSED_FLAG, shouldAutoShowTutorial, tutorialStepIndex}
@@ -81,14 +81,13 @@ function renderStyleInputs() {
   dock.querySelector('[name="arrowHeadShape"]').value = preferences.arrowHeadShape;
   const selected = selectedDrawingObjects();
   const selectedArrow = selected.length === 1 &&
-    canEdit(selected[0]?.document) && isQuickbarArrow(selected[0]?.document) &&
-    selected[0]?.document?.shape?.type !== "f";
+    canEdit(selected[0]?.document) && isQuickbarSilhouette(selected[0]?.document);
   const selectedPen = selected.length === 1 && selected[0]?.document?.shape?.type === "f";
   const width = dock.querySelector('[name="strokeWidth"]');
   if (width) {
     width.disabled = selectedArrow;
     width.title = selectedArrow
-      ? "Arrow thickness is fixed when drawn; set line width first, or use the native Drawing resize handles."
+      ? "Filled line/route/arrow thickness is set when drawn; use native Drawing resize handles."
       : "Line width";
   }
   for (const name of ["filled", "fillColor", "fillAlpha"]) {
@@ -1431,16 +1430,18 @@ function enterTextPlacement() {
 function showTextDialog(clientX, clientY) {
   if (!textScene || textDialog) return;
   const editing = Boolean(textScene.drawingId);
+  const callout = !editing && textScene.kind === "callout";
   const original = editing ? canvas.scene.drawings.get(textScene.drawingId) : null;
   if (editing && !canEdit(original)) return notify("You can edit only your own unlocked Drawings.");
   const popup = document.createElement("form");
   popup.id = "dqb-text-dialog";
-  popup.setAttribute("aria-label", editing ? "Edit Drawing text" : "Text options");
+  popup.setAttribute("aria-label", editing ? "Edit Drawing text" :
+    callout ? "Callout label" : "Text options");
   popup.innerHTML = `
-    <div class="dqb-text-dialog-title">${editing ? "Edit Text" : "Place Text"}
+    <div class="dqb-text-dialog-title">${editing ? "Edit Text" : callout ? "Place Callout" : "Place Text"}
       <button type="button" data-action="cancel-text" title="Cancel text placement" aria-label="Cancel text placement">&times;</button>
     </div>
-    <label>Text <textarea name="drawingText" rows="3" maxlength="2000" placeholder="Type your label here" required></textarea></label>
+    <label>${callout ? "Callout label" : "Text"} <textarea name="drawingText" rows="3" maxlength="2000" placeholder="Type your label here" required></textarea></label>
     <div class="dqb-text-dialog-options">
       <label>Size
         <select name="fontSizePreset" aria-label="Font size preset">
@@ -1458,7 +1459,7 @@ function showTextDialog(clientX, clientY) {
     </div>
     <div class="dqb-text-dialog-actions">
       <button type="button" data-action="cancel-text">Cancel</button>
-      <button type="submit" class="dqb-primary">${editing ? "Save Changes" : "Place Text"}</button>
+      <button type="submit" class="dqb-primary">${editing ? "Save Changes" : callout ? "Place Callout" : "Place Text"}</button>
     </div>`;
   document.body.append(popup);
   textDialog = popup;
@@ -1506,7 +1507,9 @@ function showTextDialog(clientX, clientY) {
     const existing = operation.drawingId ? canvas.scene.drawings.get(operation.drawingId) : null;
     const patch = operation.drawingId
       ? editTextPatch(existing, raw, newPreferences)
-      : textDocumentData(operation.position, raw, newPreferences);
+      : operation.kind === "callout"
+        ? calloutDrawingData(operation.calloutStart, operation.position, raw, newPreferences)
+        : textDocumentData(operation.position, raw, newPreferences);
     if (operation.drawingId ? !canEdit(existing) : !canUseDrawingQuickbar(game.user))
       return notify("You may edit only your own unlocked Drawings.");
     if (!patch) return notify("Enter text and a valid font size on an editable Drawing.", "warn");
@@ -1520,15 +1523,19 @@ function showTextDialog(clientX, clientY) {
         exitTextPlacement();
         notify("Drawing text updated.", "info");
       } else {
-        const created = await canvas.scene.createEmbeddedDocuments("Drawing", [patch]);
-        if (!created?.length) throw new Error("No Drawing created");
+        // Leader and label are created together. Never delete or rewrite either
+        // Drawing if Foundry reports an incomplete creation.
+        const data = Array.isArray(patch) ? patch : [patch];
+        const created = await canvas.scene.createEmbeddedDocuments("Drawing", data);
+        if (!created?.length || created.length !== data.length)
+          throw new Error("Foundry returned an incomplete Drawing creation; inspect Scene art");
         preferences = newPreferences;
         safeSave();
         updateDockInputs();
         try { canvas.drawings.storeHistory("create", created.map(doc => doc.toObject())); }
         catch(error) { console.debug(MODULE_ID + " | Native text undo not available", error); }
         exitTextPlacement();
-        selectCreatedDrawing(created[0].id, canvas.scene.id);
+        selectCreatedDrawing(created.at(-1).id, canvas.scene.id);
       }
       refreshSelectedPanel();
     } catch(error) {
