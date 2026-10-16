@@ -2,6 +2,7 @@ import {
   MODULE_ID, DEFAULT_PREFS, PRESETS, normalizePrefs, stylePatch,
   snapshotStyle, arrowPoints, arrowDocumentData, duplicateDrawingData, textDocumentData,
   drawingLabel, drawingCenter, findSceneDrawings, editTextPatch,
+  stylePreferencesFromDrawing, singleStylePatch, styleTargetMode,
   shouldRunDrawingShortcut, shouldStyleNewDrawing
 } from "./model.js";
 
@@ -22,6 +23,12 @@ let focusedSceneId = null;
 let focusMarker = null;
 let focusTimer = null;
 let focusSequence = 0;
+let editingDrawingId = null;
+let editingStyle = null;
+let pendingStyle = null;
+let pendingStyleTimer = null;
+let styleWriteQueue = Promise.resolve();
+let newDrawingSerial = 0;
 let saveQueue = Promise.resolve();
 let saveTimer = null;
 
@@ -41,20 +48,89 @@ function safeSave() {
       .catch(error => console.warn(`${MODULE_ID} | Could not save drawing preferences`, error));
   }, 250);
 }
-function updateDockInputs() {
+function activeStyle() { return editingStyle ?? preferences; }
+function renderStyleInputs() {
   if (!dock) return;
+  const style = activeStyle();
   for (const property of ["strokeColor", "fillColor", "textColor", "strokeWidth", "fillAlpha", "fontSize"]) {
     const input = dock.querySelector(`[name="${property}"]`);
-    if (input) input.value = preferences[property];
+    if (input) input.value = style[property];
   }
-  dock.querySelector('[name="filled"]').checked = preferences.filled;
+  dock.querySelector('[name="filled"]').checked = style.filled;
   dock.querySelector('[name="autoStyle"]').checked = preferences.autoStyle;
-  dock.querySelector('[data-value="strokeWidth"]').textContent = `${preferences.strokeWidth}px`;
-  dock.querySelector('[data-value="fillAlpha"]').textContent = `${Math.round(preferences.fillAlpha * 100)}%`;
-  dock.querySelector('[data-value="fontSize"]').textContent = `${preferences.fontSize}px`;
+  dock.querySelector('[data-value="strokeWidth"]').textContent = `${style.strokeWidth}px`;
+  dock.querySelector('[data-value="fillAlpha"]').textContent = `${Math.round(style.fillAlpha * 100)}%`;
+  dock.querySelector('[data-value="fontSize"]').textContent = `${style.fontSize}px`;
   dock.querySelector('[data-action="undo-style"]').disabled = !lastStyleUndo;
+}
+function updateDockInputs() {
+  if (!dock) return;
+  renderStyleInputs();
   refreshToolHighlight();
   refreshSelectedPanel();
+}
+function synchronizeStyleTarget(selected) {
+  const mode = styleTargetMode(selected.map(item => item.document));
+  const id = mode.mode === "single" ? mode.id : null;
+  if (id !== editingDrawingId) {
+    editingDrawingId = id;
+    editingStyle = id ? stylePreferencesFromDrawing(selected[0].document, preferences) : null;
+    renderStyleInputs();
+  }
+  dock.classList.toggle("dqb-multi-selection", mode.mode === "batch");
+  const hint = dock.querySelector('[data-role="style-scope"]');
+  if (hint) hint.textContent = mode.mode === "single"
+    ? "Editing this Drawing now. Changes apply immediately."
+    : mode.mode === "batch"
+      ? `${mode.count} unlocked selected. Adjust the controls, then Apply to All Selected.`
+      : "Setting new-Drawing defaults. Presets are built in; no saving required.";
+  const button = dock.querySelector('[data-action="apply-selected"]');
+  if (button) {
+    button.textContent = mode.mode === "batch"
+      ? `Apply to ${mode.count} Selected` : "Apply to All Selected";
+    button.disabled = mode.mode !== "batch" || !mode.count;
+  }
+}
+function queueDirectStylePatch(patch) {
+  if (!patch || !isUsable() || !canvas.drawings.active) return;
+  const selected = selectedEditableObjects();
+  if (selected.length !== 1 || selectedDrawingObjects().length !== 1) return;
+  const id = selected[0].document.id, sceneId = canvas.scene.id;
+  if (pendingStyle && (pendingStyle.id !== id || pendingStyle.sceneId !== sceneId))
+    void flushDirectStylePatch();
+  if (pendingStyle && pendingStyle.id === id && pendingStyle.sceneId === sceneId)
+    Object.assign(pendingStyle.patch, patch);
+  else pendingStyle = {id, sceneId, patch: {...patch}};
+  if (pendingStyleTimer !== null) clearTimeout(pendingStyleTimer);
+  pendingStyleTimer = setTimeout(() => void flushDirectStylePatch(), 160);
+}
+async function flushDirectStylePatch() {
+  if (pendingStyleTimer !== null) clearTimeout(pendingStyleTimer);
+  pendingStyleTimer = null;
+  const pending = pendingStyle;
+  pendingStyle = null;
+  if (!pending) return styleWriteQueue;
+  styleWriteQueue = styleWriteQueue.catch(() => {}).then(async () => {
+    const scene = canvas?.scene;
+    if (!scene || scene.id !== pending.sceneId) return;
+    const doc = scene.drawings.get(pending.id);
+    if (!doc || doc.locked || !game?.user?.isGM) return;
+    const before = snapshotStyle(doc);
+    try {
+      const updated = await scene.updateEmbeddedDocuments("Drawing", [{_id: doc.id, ...pending.patch}]);
+      if (!updated?.length) return;
+      if (lastStyleUndo?.kind !== "live" || lastStyleUndo.sceneId !== scene.id ||
+          lastStyleUndo.targetId !== doc.id) {
+        lastStyleUndo = {kind: "live", sceneId: scene.id, targetId: doc.id, documents: [before]};
+      }
+      renderStyleInputs();
+      refreshSelectedPanel();
+    } catch (error) {
+      console.error(`${MODULE_ID} | Direct Drawing style update failed`, error);
+      notify("Could not update the selected Drawing. See console.", "error");
+    }
+  });
+  return styleWriteQueue;
 }
 function refreshToolHighlight() {
   if (!dock) return;
@@ -97,7 +173,7 @@ function createDock() {
   root.setAttribute("aria-label", "Drawing Quickbar");
   root.innerHTML = `
     <div class="dqb-header">
-      <span><i class="fa-solid fa-pen-ruler" aria-hidden="true"></i> Drawing Quickbar <small>v0.1.4</small></span>
+      <span><i class="fa-solid fa-pen-ruler" aria-hidden="true"></i> Drawing Quickbar <small>v0.1.5</small></span>
       <button type="button" class="dqb-icon" data-action="close" aria-label="Close Drawing Quickbar" title="Close"><i class="fa-solid fa-xmark"></i></button>
     </div>
     <div class="dqb-content">
@@ -118,7 +194,7 @@ function createDock() {
           <button type="button" data-action="open-properties" title="Open native properties for one selected drawing"><i class="fa-solid fa-sliders"></i> Properties</button>
           <button type="button" data-action="duplicate-selected" title="Duplicate selected, unlocked native drawings, offset 24 pixels"><i class="fa-solid fa-copy"></i> Duplicate</button>
           <button type="button" data-action="edit-text" title="Edit the text on exactly one selected, unlocked native drawing"><i class="fa-solid fa-pen-to-square"></i> Edit Text</button>
-          <button type="button" data-action="apply-selected" title="Apply style to selected unlocked drawings"><i class="fa-solid fa-paintbrush"></i> Style Selected</button>
+          <button type="button" data-action="apply-selected" title="Only for multiple selections: apply the chosen style to unlocked Drawings"><i class="fa-solid fa-paintbrush"></i> Apply to All Selected</button>
           <button type="button" data-action="undo-style" title="Restore previous selected drawing styles"><i class="fa-solid fa-rotate-left"></i> Revert Style</button>
         </div>
         <details class="dqb-locked">
@@ -136,7 +212,8 @@ function createDock() {
         <div class="dqb-find-results"></div>
         <p class="dqb-find-help">Locate centers and highlights a Drawing just for you. Select replaces the current selection.</p>
       </details>
-      <div class="dqb-section-title">QUICK STYLES</div>
+      <div class="dqb-section-title">STYLE PRESETS</div>
+      <div class="dqb-style-scope" data-role="style-scope" aria-live="polite">Setting new-Drawing defaults.</div>
       <div class="dqb-presets" role="group" aria-label="Style presets">
         <button type="button" data-preset="outline">Outline</button>
         <button type="button" data-preset="danger">Danger</button>
@@ -152,9 +229,9 @@ function createDock() {
         <label class="dqb-wide">Fill opacity <strong data-value="fillAlpha"></strong><input name="fillAlpha" type="range" min="0" max="1" step="0.05"></label>
         <label class="dqb-wide">Text size <strong data-value="fontSize"></strong><input name="fontSize" type="range" min="8" max="120" step="2"></label>
       </div>
-      <label class="dqb-option"><input name="autoStyle" type="checkbox"> Use this style for new drawings while Quickbar is open</label>
+      <label class="dqb-option"><input name="autoStyle" type="checkbox"> Apply my default style to new Drawings</label>
 
-      <div class="dqb-help">Text: click the map, enter your label and choose a font size. Select objects to reveal Lock, Properties, Duplicate, Edit Text and styling. Locked objects can be recovered from the list above. Esc cancels Arrow or Text placement.</div>
+      <div class="dqb-help">New shapes become selected for immediate resizing. Presets and controls edit one selected Drawing instantly; multiple selections require Apply to All Selected. Edit Text adds a label to any unlocked shape. Locked gridlines stay protected.</div>
     </div>`;
   document.body.append(root);
   const left = preferences.position?.left ?? 112;
@@ -167,9 +244,15 @@ function createDock() {
     if (!button || !root.contains(button)) return;
     if (button.dataset.tool) return selectTool(button.dataset.tool);
     if (button.dataset.preset) {
-      preferences = normalizePrefs({...preferences, ...PRESETS[button.dataset.preset]});
+      const mode = styleTargetMode(selectedDrawingObjects().map(item => item.document));
+      if (mode.mode === "single") {
+        editingStyle = normalizePrefs({...activeStyle(), ...PRESETS[button.dataset.preset]});
+        queueDirectStylePatch(stylePatch(editingStyle));
+      } else {
+        preferences = normalizePrefs({...preferences, ...PRESETS[button.dataset.preset]});
+        safeSave();
+      }
       updateDockInputs();
-      safeSave();
     }
     if (button.dataset.action === "close") closeDock();
     if (button.dataset.action === "deselect-one") {
@@ -194,11 +277,25 @@ function createDock() {
       return;
     }
     if (!(input instanceof HTMLInputElement) || !input.name) return;
-    if (input.type === "checkbox") preferences[input.name] = input.checked;
-    else preferences[input.name] = input.type === "range" ? Number(input.value) : input.value;
-    preferences = normalizePrefs(preferences);
+    const value = input.type === "checkbox" ? input.checked
+      : input.type === "range" ? Number(input.value) : input.value;
+    if (input.name === "autoStyle") {
+      preferences.autoStyle = input.checked;
+      safeSave();
+    } else {
+      const mode = styleTargetMode(selectedDrawingObjects().map(item => item.document));
+      const existing = mode.mode === "single" ? activeStyle() : preferences;
+      const draft = {...existing, [input.name]: value};
+      if (input.name === "fillColor" || input.name === "fillAlpha") draft.filled = true;
+      if (mode.mode === "single") {
+        editingStyle = normalizePrefs(draft);
+        queueDirectStylePatch(singleStylePatch(input.name, editingStyle));
+      } else {
+        preferences = normalizePrefs(draft);
+        safeSave();
+      }
+    }
     updateDockInputs();
-    safeSave();
   });
   dock = root;
   updateDockInputs();
@@ -310,7 +407,8 @@ function refreshSelectedPanel() {
     ? selected.map(item => makeObjectRow(item.document, "deselect-one", "Deselect drawing"))
     : [Object.assign(documentCreate("p", "dqb-empty"), {textContent: "No drawings selected"})]));
   const editable = selected.filter(item => !item.document.locked);
-  for (const action of ["lock-selected", "duplicate-selected", "apply-selected"]) {
+  synchronizeStyleTarget(selected);
+  for (const action of ["lock-selected", "duplicate-selected"]) {
     dock.querySelector('[data-action="' + action + '"]').disabled = !editable.length;
   }
   for (const action of ["edit-text", "open-properties"]) {
@@ -525,32 +623,42 @@ function beginEditDrawingText(id) {
 }
 
 async function styleSelected() {
-  if (!isUsable() || !canvas.drawings.active) return notify("Open the Drawings layer and select one or more drawings.");
-  const selected = selectedEditableObjects().map(object => object.document);
-  if (!selected.length) return notify("Select one or more unlocked drawings first.");
+  if (!isUsable() || !canvas.drawings.active) return notify("Open the Drawings layer first.");
+  const all = selectedDrawingObjects();
+  if (all.length <= 1) return notify("Style controls edit one selected Drawing immediately.");
+  const selected = all.map(item => item.document).filter(d => d?.id && !d.locked);
+  if (!selected.length) return notify("No unlocked Drawings selected.");
+  await flushDirectStylePatch();
   const scene = canvas.scene;
   const backups = selected.map(snapshotStyle);
   try {
-    const result = await scene.updateEmbeddedDocuments("Drawing", selected.map(d => ({_id: d.id, ...stylePatch(preferences)})));
-    if (!result?.length) return notify("No drawings were updated.");
-    lastStyleUndo = {sceneId: scene.id, documents: backups.filter(old => result.some(r => r.id === old._id))};
+    const result = await scene.updateEmbeddedDocuments("Drawing",
+      selected.map(d => ({_id: d.id, ...stylePatch(preferences)})));
+    if (!result?.length) return notify("No Drawings were updated.");
+    lastStyleUndo = {kind: "batch", sceneId: scene.id, documents: backups.filter(old => result.some(r => r.id === old._id))};
     updateDockInputs();
-    notify(`Styled ${result.length} drawing${result.length === 1 ? "" : "s"}.`, "info");
+    notify(`Styled ${result.length} selected unlocked Drawings.`, "info");
   } catch (error) {
-    console.error(`${MODULE_ID} | Style update failed`, error);
-    notify("Could not update selected drawings. Existing data was not intentionally changed.", "error");
+    console.error(`${MODULE_ID} | Batch style update failed`, error);
+    notify("Could not style the selected Drawings. See console.", "error");
   }
 }
 
 async function undoSelectedStyle() {
+  await flushDirectStylePatch();
   const undo = lastStyleUndo;
   if (!undo || canvas?.scene?.id !== undo.sceneId) return notify("No style change to revert in this Scene.");
   // Only restore documents that still exist; never resurrect removed drawings.
-  const updates = undo.documents.filter(d => canvas.scene.drawings.get(d._id));
+  const updates = undo.documents.filter(d => {
+    const current = canvas.scene.drawings.get(d._id);
+    return current && !current.locked;
+  });
   if (!updates.length) { lastStyleUndo = null; updateDockInputs(); return notify("The selected drawings no longer exist."); }
   try {
     await canvas.scene.updateEmbeddedDocuments("Drawing", updates);
     lastStyleUndo = null;
+    editingDrawingId = null;
+    editingStyle = null;
     updateDockInputs();
     notify("Previous drawing styles restored.", "info");
   } catch (error) {

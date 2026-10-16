@@ -212,7 +212,8 @@ export function editTextPatch(document, text, preferences) {
     _id: document.id,
     text: text.replace(/\r\n?/g, "\n"),
     fontSize: p.fontSize,
-    textColor: p.textColor
+    textColor: p.textColor,
+    textAlpha: 1
   };
 }
 
@@ -243,4 +244,45 @@ export function findSceneDrawings(documents, query = "", limit = 60) {
       a.doc.id.localeCompare(b.doc.id));
   const safeLimit = Number.isFinite(limit) ? Math.max(1, Math.min(Math.trunc(limit), 250)) : 60;
   return {total: all.length, matches: matched.length, shown: matched.slice(0, safeLimit).map(entry => entry.doc)};
+}
+
+/** Map a single Drawing's visible style into editor controls without replacing saved new-shape preferences. */
+export function stylePreferencesFromDrawing(doc, saved = DEFAULT_PREFS) {
+  const defaults = normalizePrefs(saved);
+  if (!doc) return defaults;
+  return normalizePrefs({
+    ...defaults,
+    strokeColor: doc.strokeColor ?? defaults.strokeColor,
+    strokeWidth: Number.isFinite(doc.strokeWidth) && doc.strokeWidth > 0 ? doc.strokeWidth : defaults.strokeWidth,
+    strokeAlpha: Number.isFinite(doc.strokeAlpha) ? doc.strokeAlpha : defaults.strokeAlpha,
+    fillColor: doc.fillColor ?? defaults.fillColor,
+    fillAlpha: Number.isFinite(doc.fillAlpha) && doc.fillAlpha > 0 ? doc.fillAlpha : defaults.fillAlpha,
+    filled: Number(doc.fillType) > 0,
+    textColor: doc.textColor ?? defaults.textColor,
+    fontSize: Number.isFinite(doc.fontSize) ? doc.fontSize : defaults.fontSize
+  });
+}
+
+/** Restrict a direct edit to the single intended style property. */
+export function singleStylePatch(name, prefs) {
+  const p = normalizePrefs(prefs);
+  switch (name) {
+    case "strokeColor": return {strokeColor: p.strokeColor, strokeAlpha: Math.max(.1, p.strokeAlpha)};
+    case "strokeWidth": return {strokeWidth: p.strokeWidth, strokeAlpha: Math.max(.1, p.strokeAlpha)};
+    case "fillColor": return {fillColor: p.fillColor, fillType: 1, fillAlpha: Math.max(.05, p.fillAlpha)};
+    case "fillAlpha": return {fillType: 1, fillAlpha: p.fillAlpha};
+    case "filled": return {fillType: p.filled ? 1 : 0, fillAlpha: p.filled ? Math.max(.05, p.fillAlpha) : 0};
+    case "textColor": return {textColor: p.textColor, textAlpha: 1};
+    case "fontSize": return {fontSize: p.fontSize, textAlpha: 1};
+    default: return null;
+  }
+}
+
+/** Locked objects never become automatic editing targets. */
+export function styleTargetMode(selected = []) {
+  const all = [...selected];
+  if (!all.length) return {mode: "defaults", count: 0, id: null};
+  if (all.length === 1 && all[0]?.id && !all[0].locked)
+    return {mode: "single", count: 1, id: all[0].id};
+  return {mode: "batch", count: all.filter(d => d?.id && !d.locked).length, id: null};
 }
