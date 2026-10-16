@@ -2,12 +2,12 @@ import test from "node:test";
 import assert from "node:assert/strict";
 import {readFile} from "node:fs/promises";
 
-test("all-Drawings finder exposes local Locate, Select, Edit and locked recovery", async () => {
+test("all-Drawings finder exposes local Locate, additive Select, Edit and locked recovery", async () => {
   const src = await readFile(new URL("../scripts/main.js", import.meta.url), "utf8");
   assert.match(src, /data-role="drawing-search"/);
   assert.match(src, /findSceneDrawings\(documents, input\.value, finderVisibleCount\)/);
   assert.match(src, /makeActionButton\(document, "locate-one"/);
-  assert.match(src, /doc\.locked \? "unlock-one" : "select-only"/);
+  assert.match(src, /doc\.locked \? "unlock-one" : "toggle-one"/);
   assert.match(src, /action === "edit-one-text"/);
   assert.match(src, /canvas\.animatePan\(view\)/);
   assert.match(src, /canvas\.clientCoordinatesFromCanvas\(/);

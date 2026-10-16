@@ -59,7 +59,7 @@ test("GMs can read locked Drawing info without releasing its lock",async()=>{
   assert.match(src,/function inspectLockedDrawing\(id\)/);
   assert.match(src,/if \(!doc \|\| !doc\.locked\) return notify/);
   assert.match(src,/if \(document\.locked && game\.user\.isGM\)/);
-  const info=src.slice(src.indexOf('function inspectLockedDrawing(id)'),src.indexOf('async function selectOnlyDrawing',src.indexOf('function inspectLockedDrawing(id)')));
+  const info=src.slice(src.indexOf('function inspectLockedDrawing(id)'),src.indexOf('async function toggleDrawingSelection',src.indexOf('function inspectLockedDrawing(id)')));
   assert.ok(info.includes('showModal'));
   for(const forbidden of ['deleteEmbeddedDocuments(', 'updateEmbeddedDocuments(', 'locked: false']) {
     assert.ok(!info.includes(forbidden),'Inspect must be non-destructive');

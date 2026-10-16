@@ -16,10 +16,10 @@ test("Token and Drawing controls use one Quickbar, with no layer switch on Token
 
 test("Drawing actions can switch from Tokens only after an explicit click", async () => {
   const source = await readFile(new URL("../scripts/main.js", import.meta.url), "utf8");
-  assert.match(source, /async function selectOnlyDrawing\(id\)/);
+  assert.match(source, /async function toggleDrawingSelection\(id\)/);
   assert.match(source, /async function beginEditDrawingText\(id\)/);
   assert.match(source, /if \(!canvas\.drawings\.active\) await ui\.controls\.activate\(\{control: "drawings", tool: "select"\}\)/);
-  assert.match(source, /if \(button\.dataset\.action === "select-only"\) await selectOnlyDrawing/);
+  assert.match(source, /if \(button\.dataset\.action === "toggle-one"\) await toggleDrawingSelection/);
   assert.match(source, /if \(button\.dataset\.action === "edit-one-text"\) await beginEditDrawingText/);
   assert.match(source, /async function unlockDrawing\(id\) \{\s*\/\/ Only a GM may unlock permanent map elements/);
   assert.match(source, /if \(!isUsable\(\) \|\| !game\.user\.isGM\)/);
