@@ -29,6 +29,7 @@ jobs:
           node --check scripts/model.js
           node --check scripts/tutorial.js
           node --check scripts/selection.js
+          node --check scripts/annotations.js
           npm test
       - name: Package module
         run: python3 tools/build_release.py

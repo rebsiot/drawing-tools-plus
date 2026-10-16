@@ -20,6 +20,7 @@ jobs:
           node --check scripts/model.js
           node --check scripts/tutorial.js
           node --check scripts/selection.js
+          node --check scripts/annotations.js
       - name: Run automated tests
         run: npm test
       - name: Build complete module package

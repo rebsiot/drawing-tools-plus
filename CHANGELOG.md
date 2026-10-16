@@ -2,6 +2,15 @@
 
 Short summaries of changes you can see in Foundry. See the [test report](docs/TEST-REPORT.md) for technical verification.
 
+## v0.1.16 — Lines, Routes, Callouts and First-Open Drawing Count
+- **New:** A compact second row has **Line, Arrow, Route and Callout**, with the original six drawing tools unchanged in row one.
+- **New:** Straight Line uses one narrow native polygon Drawing; Route records multiple clicked waypoints into one native editable polygon. Finish with double-click, Enter or Finish; cancel with Esc/right-click.
+- **New:** Callout draws a leader to an editable native text label. It creates two separate native Drawings, one for the pointer and one for text, so editing either does not silently overwrite the other.
+- **Changed:** New Chevron arrowheads have a conspicuous V-shaped notch, so they no longer look the same as filled triangles. All three head styles remain v14-valid native polygon shapes; existing arrow geometry stays intact.
+- **Fixed:** All Drawings count is initialized when the Quickbar opens, not only on first expansion, and updates on Scene Drawing create/delete.
+- **Preserved:** Player-authored Drawing permissions, GM locks, native Scene IDs, selected list positions, quick styles, launcher buttons and all previous art. No migration.
+- **Testing:** Automated/mock model and source wiring checks plus packaged ZIP; live Foundry v14 verification remains pending.
+
 ## v0.1.15 — Clear Drawing Quickbar Launcher Icon
 - **Improved:** Both Token Controls and Drawing Controls now use the **pen-and-ruler** launcher icon, matching the Drawing Quickbar header instead of looking like Foundry's existing Palette control.
 - **Unchanged:** One shared Quickbar, Token/Drawing layer switching, author permissions, selected Drawings, locked protections, Scene data and existing module ID. No migration or user action is needed beyond updating.

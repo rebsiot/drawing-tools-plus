@@ -1,6 +1,13 @@
-# Test Report — Drawing Quickbar v0.1.15
+# Test Report — Drawing Quickbar v0.1.16
 
 **Date:** 2026-10-16
+
+## v0.1.16 — Second row, Chevron geometry and first-open count (2026-10-16)
+
+**Source baseline:** Published v0.1.15. Current work is a v0.1.16 beta source change for Foundry v14.
+**Unit/mock test plan:** Geometry: ribbons from straight and multi-point paths; native type p, bounded coordinates, style preservation, no mutation of old art, invalid geometry fails closed, native Callout pair with distinct editable text rectangle. Chevron triangle versus deeply notched V at equivalent sizes, all start/end/both/none cases, native polygon type instead of invalid freehand shape. UI source: two rows, four tool modes, waypoint/finish/cancel/Enter paths, native creation, scene identity checks, All Drawings count refreshed when collapsed before list rendering. All prior ownership and selection tests retained.
+**Packaging/verification:** Node syntax checks for main/model/tutorial/annotations/selection and complete release ZIP builder. Live Foundry v14 canvas preview, clicking, route completion, callout text persistence and player permissions remain unverified until user tests them.
+**Safety:** No forced Scene writes on install, data model migration, changing native Drawing IDs/locks or custom permission bypass. Callout is two ordinary independent Drawing documents.
 
 ## v0.1.15 — Token/Drawing launcher icon (2026-10-16)
 

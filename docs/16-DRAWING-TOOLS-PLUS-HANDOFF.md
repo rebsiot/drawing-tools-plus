@@ -229,6 +229,25 @@ v0.1.3 supersedes v0.1.2 and places the Selected Drawings inspector/Lock actions
 
 **Tests:** Source/mock assertions require the new icon on the shared launcher declaration and match it to the header, while prohibiting the former launcher palette icon. Existing Node/mock, syntax, ZIP and main validation must pass. **Live browser check still required:** confirm a distinct pen-and-ruler button appears under Token Controls and Drawings, and both toggle the same toolbar without changing selected tokens or native Drawings.
 
+## 16.1 update — v0.1.16: Line/Route/Callout row, Chevron distinguishability, initial Drawing count (2026-10-16)
+
+**User approvals:** Add Line, Arrow, Route and Callout in the large second tool row; Chevron arrowheads currently look identical to filled triangles. While implementing, user reported **All Drawings (0)** displayed on opening until they first expanded the inventory.
+
+**Actual working baseline:** v0.1.15 GitHub main SHA `292d14f28809534376ca8c293613834364165518` and its verified native Drawing source. This thread owns module `foundry-drawing-quickbar`, no adjacent module contract change.
+
+**Implementation:**
+- The original six-tool row stays Select/Pen/Box/Circle/Polygon/Text. The former full-width Arrow button becomes a four-cell second row, Line/Arrow/Route/Callout; hints appear only when an annotation tool is active. Native Drawing Controls and Token launcher unchanged.
+- Shared temporary SVG overlay handles single-drag Line, Arrow, and Callout; Route collects up to 80 native Scene-coordinate waypoints and saves on double-click/Enter/Finish. Right-click/Escape cancels. New `scripts/annotations.js` produces a valid native `shape.type:"p"` ribbon for Line/Route/Callout pointer, with exact one-document creation and namespaced kind flags. No new renderer or layer; no automatic edits to existing artwork.
+- Callout drag is followed by the existing text dialog. Saving creates two native Drawing documents in one batch: a pointer and a text rectangle; moving/deleting one does not modify the other. Label is editable via existing Edit Text. One created label is selected. Native author and permission handling remains in Foundry; no special trust bypass.
+- Chevron ends now use a visibly notched V-shaped native **polygon** silhouette, not a freehand `shape.type:"f"` (v14 Drawing validation rejects that type). All old existing Chevron, Triangle and Diamond native shapes remain unmodified. New Chevron uses versioned v4 flag geometry while other heads remain v3. Preview and saved geometry use the same native valid polygon points.
+- `createDock()` calls `refreshFinder()` immediately after `dock=root` and initial input rendering; `refreshFinder` updates the collapsed **All Drawings** count first, then returns before expensive result rendering when closed. Scene create/update/delete hooks still refresh counts. Search/filter/pagination and selection scroll protections stay unchanged.
+- `drawingAppearancePatch` protects visibility of native Line/Route/Callout polygon ribbons while preserving existing arrow/polygon styles. First-use tutorial updated for both tool rows and concise controls.
+- App-side source and model/unit tests for geometry, creation semantics, buttons, keyboard operations and initial count; both CI workflows syntax check the new annotation module. Live Foundry v14 tests are mandatory before verified-runtime claim.
+
+**First tests:** Back up world; inspect collapsed All Drawings count on a known populated Scene before expanding. Draw line; click Route waypoints, finish, reload, inspect native polygon; cancel another Route; draw Callout and confirm exactly two native objects, editable label, no automatic pointer movement on label edit. Compare equally sized Triangle and Chevron arrows at normal zoom with one/both ends, and retest GM locks and player ownership. Stop at first browser error and report the v14 build.
+
+**Release:** versioned `v0.1.16` beta, unchanged stable manifest URL, restrictive license, v0.1.15 rollback. Owns `docs/16-DRAWING-TOOLS-PLUS-HANDOFF.md`. Shared contracts do not need modification. Background/Working gridline groups remain issue #1.
+
 ## Source of truth and GitHub release boundaries
 
 - Use the actual GitHub source at `rebsiot/drawing-tools-plus` (default branch `main`) and/or the newest verified working ZIP. Handoff notes describe intent but are not code.
