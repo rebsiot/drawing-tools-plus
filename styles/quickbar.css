@@ -449,3 +449,63 @@
 #foundry-drawing-quickbar .dqb-finder button[data-action="toggle-one"][aria-pressed="true"] {
   border-color: #d8b56e;
 }
+
+/* v0.1.13: one inventory with an inline locked-state marker and compact filter. */
+#foundry-drawing-quickbar .dqb-object-lock-icon {
+  color: #f2a3a9;
+  font-size: 10px;
+  margin-right: 5px;
+  vertical-align: baseline;
+  flex: none;
+}
+#foundry-drawing-quickbar .dqb-find-heading {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  margin: 8px 0 5px;
+}
+#foundry-drawing-quickbar .dqb-find-heading .dqb-find-label {
+  display: block;
+  flex: 1;
+  min-width: 0;
+  margin: 0;
+  font-size: 11px;
+}
+#foundry-drawing-quickbar .dqb-find-heading .dqb-locked-filter {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 5px;
+  flex: none;
+  min-height: 26px;
+  padding: 3px 7px;
+  border: 1px solid #718092;
+  border-radius: 5px;
+  background: #354051;
+  color: #e9edf4;
+  font-size: 10px;
+  cursor: pointer;
+}
+#foundry-drawing-quickbar .dqb-find-heading .dqb-locked-filter[aria-pressed="true"] {
+  color: #ffe9e9;
+  border-color: #e69aa4;
+  background: #653d47;
+}
+#foundry-drawing-quickbar .dqb-find-heading .dqb-locked-filter i {
+  color: #f2a3a9;
+}
+#foundry-drawing-quickbar .dqb-find-heading .dqb-locked-filter:focus-visible {
+  outline: 2px solid #f1d080;
+  outline-offset: 2px;
+}
+#foundry-drawing-quickbar .dqb-finder > input[data-role="drawing-search"] {
+  width: 100%;
+  min-height: 31px;
+  color: #f2f5f7;
+  background: #121923;
+  border: 1px solid #77899a;
+  border-radius: 5px;
+  padding: 5px 8px;
+  user-select: text;
+}

@@ -297,6 +297,12 @@ export function editTextPatch(document, text, preferences) {
   };
 }
 
+/** UI-only locked filter. It never mutates Drawings or changes their lock states. */
+export function filterLockedDrawings(documents, lockedOnly = false) {
+  const all = documents ?? [];
+  return lockedOnly ? [...all].filter(doc => doc?.locked === true) : all;
+}
+
 /** Search ALL Scene Drawing documents; exact text is more useful than generic names. */
 export function findSceneDrawings(documents, query = "", limit = 60) {
   const all = [...(documents ?? [])].filter(doc => doc?.id);

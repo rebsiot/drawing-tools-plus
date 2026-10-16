@@ -1,7 +1,7 @@
 import {
   MODULE_ID, DEFAULT_PREFS, PRESETS, normalizePrefs, stylePatch,
   snapshotStyle, arrowPoints, arrowDocumentData, duplicateDrawingData, textDocumentData,
-  drawingLabel, drawingCenter, findSceneDrawings, editTextPatch,
+  drawingLabel, drawingCenter, findSceneDrawings, filterLockedDrawings, editTextPatch,
   stylePreferencesFromDrawing, singleStylePatch, styleTargetMode, drawingAppearancePatch,
   penStylePatch, isQuickbarArrow,
   shouldRunDrawingShortcut, shouldStyleNewDrawing
@@ -40,6 +40,7 @@ let styleWriteQueue = Promise.resolve();
 let newDrawingSerial = 0;
 const FINDER_PAGE_SIZE = 60;
 let finderVisibleCount = FINDER_PAGE_SIZE;
+let finderLockedOnly = false;
 let saveQueue = Promise.resolve();
 let saveTimer = null;
 
@@ -232,7 +233,7 @@ function createDock() {
   root.setAttribute("aria-label", "Drawing Quickbar");
   root.innerHTML = `
     <div class="dqb-header">
-      <span><i class="fa-solid fa-pen-ruler" aria-hidden="true"></i> Drawing Quickbar <small>v0.1.12</small></span>
+      <span><i class="fa-solid fa-pen-ruler" aria-hidden="true"></i> Drawing Quickbar <small>v0.1.13</small></span>
       <button type="button" class="dqb-icon" data-action="close" aria-label="Close Drawing Quickbar" title="Close"><i class="fa-solid fa-xmark"></i></button>
     </div>
     <div class="dqb-content">
@@ -277,20 +278,21 @@ function createDock() {
           <button type="button" data-action="undo-style" title="Undo the most recent Quickbar appearance change only; not movement, text edits or deletion"><i class="fa-solid fa-rotate-left"></i> Undo Style Change</button>
         </div>
         <div class="dqb-selected-list" aria-live="polite"></div>
-        <details class="dqb-locked">
-          <summary>Locked Drawings (<span data-value="locked-count">0</span>)</summary>
-          <div class="dqb-locked-list"></div>
-        </details>
         <details class="dqb-finder" aria-label="All Drawings on this Scene">
           <summary>All Drawings (<span data-value="scene-drawing-count">0</span>)</summary>
-          <label class="dqb-find-label">
-            Search drawings
-            <input type="search" data-role="drawing-search" aria-label="Search all Scene Drawings" placeholder="Text, name, shape or ID" autocomplete="off">
-          </label>
+          <div class="dqb-find-heading">
+            <label class="dqb-find-label" for="dqb-drawing-search">Search drawings</label>
+            <button type="button" data-action="finder-locked-only" class="dqb-locked-filter"
+              aria-label="Show locked Drawings only" aria-pressed="false" title="Show only locked Drawings">
+              <i class="fa-solid fa-lock" aria-hidden="true"></i> Locked only
+            </button>
+          </div>
+          <input id="dqb-drawing-search" type="search" data-role="drawing-search"
+            aria-label="Search all Scene Drawings" placeholder="Text, name, shape or ID" autocomplete="off">
           <small class="dqb-find-status" role="status"></small>
           <div class="dqb-find-results"></div>
           <button type="button" data-action="finder-more" class="dqb-finder-more" hidden>Show more</button>
-          <p class="dqb-find-help">Locate pans and highlights a Drawing in your view. Select targets only that object; locked items can be unlocked here.</p>
+          <p class="dqb-find-help">Locate highlights a Drawing. Select and Deselect change your selection. <i class="fa-solid fa-lock" aria-hidden="true"></i> marks protected Drawings; the GM can Unlock or inspect them here.</p>
         </details>
       </section>
       <div class="dqb-section-title">STYLE PRESETS</div>
@@ -349,6 +351,11 @@ function createDock() {
     if (button.dataset.action === "unlock-one") await unlockDrawing(button.dataset.drawingId);
     if (button.dataset.action === "locate-one") await locateDrawing(button.dataset.drawingId);
     if (button.dataset.action === "inspect-one") inspectLockedDrawing(button.dataset.drawingId);
+    if (button.dataset.action === "finder-locked-only") {
+      finderLockedOnly = !finderLockedOnly;
+      finderVisibleCount = FINDER_PAGE_SIZE;
+      refreshFinder();
+    }
     if (button.dataset.action === "finder-more") {
       finderVisibleCount += FINDER_PAGE_SIZE;
       refreshFinder();
@@ -546,6 +553,7 @@ function closeDock() {
   dock?.remove();
   dock = null;
   finderVisibleCount = FINDER_PAGE_SIZE;
+  finderLockedOnly = false;
 }
 function toggleDock({activateDrawings = true} = {}) {
   return dock ? closeDock() : openDock({activateDrawings});
@@ -653,10 +661,18 @@ function makeObjectRow(document, action, title, finder = false) {
     : finder && generic ? `${label.kind} · ${String(document.id ?? "").slice(0, 8)}`
     : label.name;
   details.title = label.name + " (" + (document.id ?? "") + ")";
+  if (document.locked) {
+    row.classList.add("dqb-is-locked");
+    const lock = documentCreate("i", "fa-solid fa-lock dqb-object-lock-icon");
+    lock.setAttribute("role", "img");
+    lock.setAttribute("aria-label", "Locked Drawing");
+    lock.title = "Locked Drawing; unlock before editing";
+    details.prepend(lock);
+  }
   const sub = documentCreate("small", "dqb-object-kind");
   const place = finder && Number.isFinite(document.x) && Number.isFinite(document.y)
     ? ` · ${Math.round(document.x)}, ${Math.round(document.y)}` : "";
-  sub.textContent = label.kind + (label.locked ? " · Locked" : "") +
+  sub.textContent = label.kind +
     (document.hidden ? " · Hidden" : "") +
     (!game.user.isGM ? (canEdit(document) ? " · Yours" : " · View only") : "") + place;
   const summary = documentCreate("span", "dqb-object-summary");
@@ -705,8 +721,7 @@ function refreshSelectedPanel() {
   dock.classList.toggle("dqb-has-selection", Boolean(selected.length));
   dock.classList.toggle("dqb-can-revert", Boolean(lastStyleUndo));
   const selectedList = dock.querySelector(".dqb-selected-list");
-  const lockedList = dock.querySelector(".dqb-locked-list");
-  if (!selectedList || !lockedList) return;
+  if (!selectedList) return;
   dock.querySelector('[data-value="selected-count"]').textContent = String(selected.length);
   selectedList.replaceChildren(...(selected.length
     ? selected.map(item => makeObjectRow(item.document, "deselect-one", "Deselect drawing"))
@@ -721,13 +736,6 @@ function refreshSelectedPanel() {
     dock.querySelector('[data-action="' + action + '"]').disabled =
       selected.length !== 1 || editable.length !== 1;
   }
-  dock.querySelector(".dqb-locked").hidden = !game.user.isGM;
-  const locked = (game.user.isGM ? sceneDrawingDocuments() : []).filter(doc => doc?.locked).sort((a,b) =>
-    drawingLabel(a).name.localeCompare(drawingLabel(b).name));
-  dock.querySelector('[data-value="locked-count"]').textContent = String(locked.length);
-  lockedList.replaceChildren(...(locked.length
-    ? locked.map(doc => makeObjectRow(doc, "unlock-one", "Unlock drawing"))
-    : [Object.assign(documentCreate("p", "dqb-empty"), {textContent: "No locked drawings"})]));
   refreshFinder();
 }
 
@@ -740,19 +748,25 @@ function refreshFinder() {
   const results = dock.querySelector(".dqb-find-results");
   const status = dock.querySelector(".dqb-find-status");
   const more = dock.querySelector('[data-action="finder-more"]');
-  if (!panel || !input || !results || !status || !more) return;
+  const filter = dock.querySelector('[data-action="finder-locked-only"]');
+  if (!panel || !input || !results || !status || !more || !filter) return;
   const documents = sceneDrawingDocuments();
   dock.querySelector('[data-value="scene-drawing-count"]').textContent = String(documents.length);
+  filter.setAttribute("aria-pressed", String(finderLockedOnly));
+  filter.title = finderLockedOnly ? "Show all Drawings again" : "Show only locked Drawings";
   if (!panel.open) return; // Keep the closed panel cheap on frequent Drawing updates.
-  const found = findSceneDrawings(documents, input.value, finderVisibleCount);
+  // Apply the lock filter before text matching/pagination. Never change the documents.
+  const visible = filterLockedDrawings(documents, finderLockedOnly);
+  const found = findSceneDrawings(visible, input.value, finderVisibleCount);
   status.textContent = found.matches
-    ? `Showing ${found.shown.length} of ${found.matches} Drawing${found.matches === 1 ? "" : "s"}`
-    : "No matching Drawings";
+    ? `Showing ${found.shown.length} of ${found.matches}${finderLockedOnly ? " locked" : ""} Drawing${found.matches === 1 ? "" : "s"}`
+    : finderLockedOnly ? "No matching locked Drawings" : "No matching Drawings";
   results.replaceChildren(...(found.shown.length
     ? found.shown.map(doc => makeObjectRow(doc,
       doc.locked ? "unlock-one" : "toggle-one",
       doc.locked ? "Unlock drawing" : "Add or remove this Drawing from selection", true))
-    : [Object.assign(documentCreate("p", "dqb-empty"), {textContent: "Try a different search"})]));
+    : [Object.assign(documentCreate("p", "dqb-empty"), {textContent:
+      finderLockedOnly ? "No locked Drawings match this search" : "Try a different search"})]));
   const remaining = found.matches - found.shown.length;
   more.hidden = remaining <= 0;
   if (remaining > 0) more.textContent = `Show ${Math.min(FINDER_PAGE_SIZE, remaining)} more`;
@@ -1485,5 +1499,5 @@ Hooks.once("ready", () => {
     // A tool switch or Scene navigation should never leave an invisible input shield over the canvas.
     if (arrowOverlay && !arrowOverlay.contains(event.target) && !dock?.contains(event.target) && !canvas?.drawings?.active) exitArrow();
   });
-  console.info(`${MODULE_ID} | v0.1.12 ready (Foundry v14 native Drawing workflow)`);
+  console.info(`${MODULE_ID} | v0.1.13 ready (Foundry v14 native Drawing workflow)`);
 });
