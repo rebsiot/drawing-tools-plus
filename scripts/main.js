@@ -207,7 +207,7 @@ function createDock() {
   root.setAttribute("aria-label", "Drawing Quickbar");
   root.innerHTML = `
     <div class="dqb-header">
-      <span><i class="fa-solid fa-pen-ruler" aria-hidden="true"></i> Drawing Quickbar <small>v0.1.10</small></span>
+      <span><i class="fa-solid fa-pen-ruler" aria-hidden="true"></i> Drawing Quickbar <small>v0.1.11</small></span>
       <button type="button" class="dqb-icon" data-action="close" aria-label="Close Drawing Quickbar" title="Close"><i class="fa-solid fa-xmark"></i></button>
     </div>
     <div class="dqb-content">
@@ -486,7 +486,7 @@ function maybeOfferTutorial() {
 }
 
 async function openDock({activateDrawings = true} = {}) {
-  if (!isUsable()) return notify("Open a Scene as GM before using this toolbar.");
+  if (!isUsable()) return notify("Open a Scene and ask your GM to enable Use Drawing Tools.");
   if (dock) return;
   createDock();
   // Opening via Token controls must not deselect Tokens or leave the Tokens layer.
@@ -759,7 +759,8 @@ async function locateDrawing(id) {
   if (!isUsable()) return notify("Open a Scene to locate Drawings.");
   const doc = canvas.scene.drawings.get(id);
   const center = drawingCenter(doc);
-  if (!doc || !center) return notify("Drawing location is unavailable.");
+  if (!canSeeDrawing(game.user, doc) || !center)
+    return notify("Drawing location is unavailable.");
   clearFocusMarker();
   const request = ++focusSequence;
   const sceneId = canvas.scene.id;
@@ -791,7 +792,8 @@ async function locateDrawing(id) {
 }
 
 async function lockSelected() {
-  if (!isUsable() || !canvas.drawings.active) return notify("Open the Drawings layer first.");
+  if (!isUsable() || !game.user.isGM || !canvas.drawings.active)
+    return notify("Only the GM can lock map Drawings.");
   const scene = canvas.scene;
   const drawings = selectedEditableObjects().map(item => item.document);
   if (!drawings.length) return notify("Select unlocked drawings to protect.");
@@ -810,11 +812,11 @@ async function lockSelected() {
  * Re-check the Scene, ID and lock state after confirmation before deleting.
  */
 async function deleteOneDrawing(id) {
-  if (!isUsable() || !game.user?.isGM) return;
+  if (!isUsable()) return;
   const scene = canvas.scene;
   const doc = scene.drawings.get(id);
   if (!doc) return notify("Drawing no longer exists.");
-  if (doc.locked) return notify("Locked Drawings must be explicitly unlocked before deletion.");
+  if (!canDelete(doc)) return notify("You may delete only your own unlocked Drawings.");
   // The static confirm() method calls this.wait() internally in Foundry v14.
   // Never detach it from DialogV2: an unbound call throws "undefined.wait".
   const DialogV2 = foundry?.applications?.api?.DialogV2;
@@ -841,10 +843,10 @@ async function deleteOneDrawing(id) {
   }
   if (approved !== true) return;
   if (!isUsable() || canvas.scene?.id !== scene.id ||
-      scene.drawings.get(id) !== doc || doc.locked)
+      scene.drawings.get(id) !== doc || !canDelete(doc))
     return notify("Drawing or Scene changed; nothing was deleted.");
   await flushDirectStylePatch();
-  if (canvas.scene?.id !== scene.id || scene.drawings.get(id) !== doc || doc.locked)
+  if (canvas.scene?.id !== scene.id || scene.drawings.get(id) !== doc || !canDelete(doc))
     return notify("Drawing changed; nothing was deleted.");
   try {
     const removed = await scene.deleteEmbeddedDocuments("Drawing", [id]);
@@ -857,8 +859,9 @@ async function deleteOneDrawing(id) {
   }
 }
 async function unlockDrawing(id) {
-  // Explicit Unlock works from either control menu; it updates only the requested ID.
-  if (!isUsable()) return;
+  // Only a GM may unlock permanent map elements.
+  if (!isUsable() || !game.user.isGM)
+    return notify("Only the GM can unlock map Drawings.");
   const doc = canvas.scene.drawings.get(id);
   if (!doc?.locked) return refreshSelectedPanel();
   try {
@@ -889,7 +892,7 @@ async function openSelectedProperties() {
  */
 function selectedEditableObjects() {
   return [...(canvas?.drawings?.controlled ?? [])]
-    .filter(object => object?.document?.id && !object.document.locked);
+    .filter(object => object?.document?.id && canEdit(object.document));
 }
 
 async function duplicateSelected() {
@@ -932,7 +935,7 @@ async function beginEditDrawingText(id) {
   const sceneId = canvas.scene.id;
   const doc = canvas.scene.drawings.get(id);
   if (!doc) return notify("This Drawing no longer exists.");
-  if (doc.locked) return notify("Unlock this Drawing before editing its text.");
+  if (!canEdit(doc)) return notify("You can edit only your own unlocked Drawings.");
   if (textDialog) return notify("Finish or cancel the current text entry first.");
   try {
     // Finder's Text action may be invoked while the Tokens layer is active.
@@ -955,7 +958,7 @@ async function styleSelected() {
   if (!isUsable() || !canvas.drawings.active) return notify("Open the Drawings layer first.");
   const all = selectedDrawingObjects();
   if (all.length <= 1) return notify("Style controls edit one selected Drawing immediately.");
-  const selected = all.map(item => item.document).filter(d => d?.id && !d.locked);
+  const selected = all.map(item => item.document).filter(canEdit);
   if (!selected.length) return notify("No unlocked Drawings selected.");
   await flushDirectStylePatch();
   const scene = canvas.scene;
@@ -980,7 +983,7 @@ async function undoSelectedStyle() {
   // Only restore documents that still exist; never resurrect removed drawings.
   const updates = undo.documents.filter(d => {
     const current = canvas.scene.drawings.get(d._id);
-    return current && !current.locked;
+    return canEdit(current);
   });
   if (!updates.length) { lastStyleUndo = null; updateDockInputs(); return notify("The selected drawings no longer exist."); }
   try {
@@ -1154,7 +1157,7 @@ function showTextDialog(clientX, clientY) {
   if (!textScene || textDialog) return;
   const editing = Boolean(textScene.drawingId);
   const original = editing ? canvas.scene.drawings.get(textScene.drawingId) : null;
-  if (editing && (!original || original.locked)) return notify("Unlock this Drawing before editing its text.");
+  if (editing && !canEdit(original)) return notify("You can edit only your own unlocked Drawings.");
   const popup = document.createElement("form");
   popup.id = "dqb-text-dialog";
   popup.setAttribute("aria-label", editing ? "Edit Drawing text" : "Text options");
@@ -1229,7 +1232,9 @@ function showTextDialog(clientX, clientY) {
     const patch = operation.drawingId
       ? editTextPatch(existing, raw, newPreferences)
       : textDocumentData(operation.position, raw, newPreferences);
-    if (!patch) return notify("Enter text and a valid font size; locked Drawings cannot be edited.", "warn");
+    if (operation.drawingId ? !canEdit(existing) : !canUseDrawingQuickbar(game.user))
+      return notify("You may edit only your own unlocked Drawings.");
+    if (!patch) return notify("Enter text and a valid font size on an editable Drawing.", "warn");
     const button = popup.querySelector('[type="submit"]');
     button.disabled = true;
     try {
@@ -1298,7 +1303,7 @@ Hooks.once("init", () => {
     default: structuredClone(DEFAULT_PREFS)
   });
   Hooks.on("getSceneControlButtons", controls => {
-    if (!game.user?.isGM) return;
+    if (!canUseDrawingQuickbar(game.user)) return;
     // Two launch points, ONE movable Quickbar. Do not add a new Scene control layer.
     for (const controlName of ["drawings", "tokens"]) {
       const tools = controls[controlName]?.tools;
@@ -1313,7 +1318,7 @@ Hooks.once("init", () => {
 });
 Hooks.once("ready", () => {
   preferences = normalizePrefs(game.settings.get(MODULE_ID, "preferences"));
-  if (!game.user.isGM) return;
+  if (!canUseDrawingQuickbar(game.user)) return;
   Hooks.on("preCreateDrawing", (document, data, _options, userId) => {
     if (shouldStyleNewDrawing({
       open: !!dock, active: !!canvas?.drawings?.active, autoStyle: preferences.autoStyle,
@@ -1333,7 +1338,7 @@ Hooks.once("ready", () => {
     refreshSelectedPanel();
     if (!dock || !isUsable() || !canvas.drawings.active ||
         userId !== game.user.id || doc?.parent?.id !== canvas.scene.id ||
-        doc.locked || arrowOverlay || textOverlay ||
+        !canEdit(doc) || arrowOverlay || textOverlay ||
         !["rect", "ellipse", "polygon", "freehand"].includes(ui.controls?.tool?.name)) return;
     selectCreatedDrawing(doc.id, canvas.scene.id);
   });
@@ -1361,5 +1366,5 @@ Hooks.once("ready", () => {
     // A tool switch or Scene navigation should never leave an invisible input shield over the canvas.
     if (arrowOverlay && !arrowOverlay.contains(event.target) && !dock?.contains(event.target) && !canvas?.drawings?.active) exitArrow();
   });
-  console.info(`${MODULE_ID} | v0.1.10 ready (Foundry v14 native Drawing workflow)`);
+  console.info(`${MODULE_ID} | v0.1.11 ready (Foundry v14 native Drawing workflow)`);
 });
