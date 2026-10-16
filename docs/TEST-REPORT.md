@@ -1,6 +1,10 @@
-# Test Report — Drawing Quickbar v0.1.2
+# Test Report — Drawing Quickbar v0.1.3
 
 **Date:** 2026-10-16
+
+## v0.1.3 beta — selected UI visibility pass (2026-10-16)
+
+Selected Drawing panel moved ahead of the style controls, with selection-aware compactness. Automated layout source regression added. Same v0.1.2 native Drawing logic and shortcut guards; all require live Foundry tests.
 
 ## v0.1.2 beta (2026-10-16) — test evidence
 

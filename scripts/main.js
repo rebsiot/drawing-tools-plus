@@ -91,7 +91,7 @@ function createDock() {
   root.setAttribute("aria-label", "Drawing Quickbar");
   root.innerHTML = `
     <div class="dqb-header">
-      <span><i class="fa-solid fa-pen-ruler" aria-hidden="true"></i> Drawing Quickbar <small>v0.1.2</small></span>
+      <span><i class="fa-solid fa-pen-ruler" aria-hidden="true"></i> Drawing Quickbar <small>v0.1.3</small></span>
       <button type="button" class="dqb-icon" data-action="close" aria-label="Close Drawing Quickbar" title="Close"><i class="fa-solid fa-xmark"></i></button>
     </div>
     <div class="dqb-content">
@@ -104,6 +104,22 @@ function createDock() {
         <button type="button" data-tool="text" title="Text (T)"><i class="fa-solid fa-font"></i><span>Text</span></button>
         <button type="button" data-tool="arrow" title="Draw an arrow by dragging (A)"><i class="fa-solid fa-arrow-right-long"></i><span>Arrow</span></button>
       </div>
+      <section class="dqb-selection" aria-label="Selected drawings">
+        <div class="dqb-section-title">SELECTED DRAWINGS <strong data-value="selected-count">0</strong></div>
+        <div class="dqb-selected-list" aria-live="polite"></div>
+        <div class="dqb-actions">
+          <button type="button" data-action="lock-selected" title="Protect selected drawings from ordinary canvas edits"><i class="fa-solid fa-lock"></i> Lock</button>
+          <button type="button" data-action="open-properties" title="Open native properties for one selected drawing"><i class="fa-solid fa-sliders"></i> Properties</button>
+          <button type="button" data-action="duplicate-selected" title="Duplicate selected, unlocked native drawings, offset 24 pixels"><i class="fa-solid fa-copy"></i> Duplicate</button>
+          <button type="button" data-action="edit-text" title="Edit the text on exactly one selected, unlocked native drawing"><i class="fa-solid fa-pen-to-square"></i> Edit Text</button>
+          <button type="button" data-action="apply-selected" title="Apply style to selected unlocked drawings"><i class="fa-solid fa-paintbrush"></i> Style Selected</button>
+          <button type="button" data-action="undo-style" title="Restore previous selected drawing styles"><i class="fa-solid fa-rotate-left"></i> Revert Style</button>
+        </div>
+        <details class="dqb-locked">
+          <summary>Locked Drawings (<span data-value="locked-count">0</span>)</summary>
+          <div class="dqb-locked-list"></div>
+        </details>
+      </section>
       <div class="dqb-section-title">QUICK STYLES</div>
       <div class="dqb-presets" role="group" aria-label="Style presets">
         <button type="button" data-preset="outline">Outline</button>
@@ -121,22 +137,7 @@ function createDock() {
         <label class="dqb-wide">Text size <strong data-value="fontSize"></strong><input name="fontSize" type="range" min="8" max="120" step="2"></label>
       </div>
       <label class="dqb-option"><input name="autoStyle" type="checkbox"> Use this style for new drawings while Quickbar is open</label>
-      <section class="dqb-selection" aria-label="Selected drawings">
-        <div class="dqb-section-title">SELECTED DRAWINGS <strong data-value="selected-count">0</strong></div>
-        <div class="dqb-selected-list" aria-live="polite"></div>
-        <div class="dqb-actions">
-          <button type="button" data-action="lock-selected" title="Protect selected drawings from ordinary canvas edits"><i class="fa-solid fa-lock"></i> Lock</button>
-          <button type="button" data-action="open-properties" title="Open native properties for one selected drawing"><i class="fa-solid fa-sliders"></i> Properties</button>
-          <button type="button" data-action="duplicate-selected" title="Duplicate selected, unlocked native drawings, offset 24 pixels"><i class="fa-solid fa-copy"></i> Duplicate</button>
-          <button type="button" data-action="edit-text" title="Edit the text on exactly one selected, unlocked native drawing"><i class="fa-solid fa-pen-to-square"></i> Edit Text</button>
-          <button type="button" data-action="apply-selected" title="Apply style to selected unlocked drawings"><i class="fa-solid fa-paintbrush"></i> Style Selected</button>
-          <button type="button" data-action="undo-style" title="Restore previous selected drawing styles"><i class="fa-solid fa-rotate-left"></i> Revert Style</button>
-        </div>
-        <details class="dqb-locked">
-          <summary>Locked Drawings (<span data-value="locked-count">0</span>)</summary>
-          <div class="dqb-locked-list"></div>
-        </details>
-      </section>
+
       <div class="dqb-help">Text: click the map, enter your label and choose a font size. Select objects to reveal Lock, Properties, Duplicate, Edit Text and styling. Locked objects can be recovered from the list above. Esc cancels Arrow or Text placement.</div>
     </div>`;
   document.body.append(root);
@@ -258,6 +259,8 @@ function documentCreate(tag, className) {
 function refreshSelectedPanel() {
   if (!dock) return;
   const selected = selectedDrawingObjects();
+  dock.classList.toggle("dqb-has-selection", Boolean(selected.length));
+  dock.classList.toggle("dqb-can-revert", Boolean(lastStyleUndo));
   const selectedList = dock.querySelector(".dqb-selected-list");
   const lockedList = dock.querySelector(".dqb-locked-list");
   if (!selectedList || !lockedList) return;
@@ -741,5 +744,5 @@ Hooks.once("ready", () => {
     // A tool switch or Scene navigation should never leave an invisible input shield over the canvas.
     if (arrowOverlay && !arrowOverlay.contains(event.target) && !dock?.contains(event.target) && !canvas?.drawings?.active) exitArrow();
   });
-  console.info(`${MODULE_ID} | v0.1.2 ready (Foundry v14 native Drawing workflow)`);
+  console.info(`${MODULE_ID} | v0.1.3 ready (Foundry v14 native Drawing workflow)`);
 });

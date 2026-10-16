@@ -5,7 +5,7 @@ import {readFile} from "node:fs/promises";
 test("public beta manifest resolves to version-pinned Foundry release and restrictive license", async () => {
   const manifest = JSON.parse(await readFile(new URL("../module.json", import.meta.url), "utf8"));
   const id = "foundry-drawing-quickbar";
-  const version = "0.1.2";
+  const version = "0.1.3";
   assert.equal(manifest.id, id);
   assert.equal(manifest.version, version);
   assert.equal(manifest.manifest, "https://raw.githubusercontent.com/rebsiot/drawing-tools-plus/main/module.json");

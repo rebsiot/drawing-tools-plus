@@ -140,3 +140,9 @@
 #dqb-text-dialog textarea:focus-visible, #dqb-text-dialog select:focus-visible {
   outline:2px solid #f8d688; outline-offset:2px;
 }
+
+/* Keep selected operations directly beneath the creation tools and compact at rest. */
+#foundry-drawing-quickbar:not(.dqb-has-selection) .dqb-selected-list {display: none;}
+#foundry-drawing-quickbar:not(.dqb-has-selection):not(.dqb-can-revert) .dqb-selection .dqb-actions {display: none;}
+#foundry-drawing-quickbar:not(.dqb-has-selection).dqb-can-revert .dqb-selection .dqb-actions button:not([data-action="undo-style"]) {display:none;}
+#foundry-drawing-quickbar .dqb-selection {margin-top:8px; padding-top:0; border-top:0; border-bottom:1px solid #596373; padding-bottom:11px;}

@@ -1,8 +1,8 @@
-# Drawing Tools+ / Drawing Quickbar - v0.1.2 beta (2026-10-16)
+# Drawing Tools+ / Drawing Quickbar - v0.1.3 beta (2026-10-16)
 
 Project repository: https://github.com/rebsiot/drawing-tools-plus
 
-**Beta release:** https://github.com/rebsiot/drawing-tools-plus/releases/tag/v0.1.2
+**Beta release:** https://github.com/rebsiot/drawing-tools-plus/releases/tag/v0.1.3
 
 **Permanent Foundry install/update manifest:**
 `https://raw.githubusercontent.com/rebsiot/drawing-tools-plus/main/module.json`
@@ -11,7 +11,7 @@ Project repository: https://github.com/rebsiot/drawing-tools-plus
 
 A **system-independent Foundry VTT v14 beta** for making the existing **Drawings** layer less cumbersome. This is not a wall-building tool, nor does it replace Foundry's Drawing documents, native drawing editor, scene persistence, selection, or normal deletion.
 
-**Status:** User reported that Quickbar text entry in live Foundry v14 triggered letter shortcuts. v0.1.2 adds a focused text popup, disables shortcuts during text entry, and provides selected-Drawing actions and a locked-Drawing recovery list. These changes require live Foundry verification; test on a backed-up Scene.
+**Status:** User reported that Quickbar text entry in live Foundry v14 triggered letter shortcuts. v0.1.3 adds a focused text popup, disables shortcuts during text entry, and provides selected-Drawing actions and a locked-Drawing recovery list. These changes require live Foundry verification; test on a backed-up Scene.
 
 ## What it adds
 
@@ -23,7 +23,7 @@ A **system-independent Foundry VTT v14 beta** for making the existing **Drawings
 - Optional **Use this style for new drawings** while the Quickbar remains open. Styles are applied via the documented `preCreateDrawing` hook, without altering existing drawings.
 - **Duplicate** creates offset copies of the selected, unlocked native Drawings without changing their originals, IDs or linked data. **Edit Text** opens Foundry v14's built-in inline text editor for exactly one selected, unlocked Drawing.
 - **Text popup:** Quickbar Text changes into a placement cursor. Click the map to open a focused text box with size presets, custom pixel size and text color. **Place Text** creates one native rectangle Drawing carrying the label. Cancel/Escape creates nothing.
-- **Selected Drawings:** List every selected Drawing by name/type with a Remove (deselect) control and clearly visible Lock, Properties, Duplicate, Edit Text and Style Selected actions. Lock uses the native `locked` field; expand **Locked Drawings** to unlock any locked Drawing in this Scene.
+- **Selected Drawings:** Immediately beneath the tool buttons, show selected Drawings by name/type with a Remove (deselect) control and clearly visible Lock, Properties, Duplicate, Edit Text and Style Selected actions. The action row collapses when nothing is selected, except for Revert Style when an undo exists. Lock uses the native `locked` field; expand **Locked Drawings** to unlock any locked Drawing in this Scene.
 - **Style Selected** applies the chosen style to selected, unlocked native Drawing documents; **Revert Style** reverses the last such batch made by this module during the current scene session.
 - Shortcuts while the Quickbar is open and the Drawings layer is active (but never during native or popup text editing): `V` Select, `F` Freehand, `R` Rectangle, `E` Ellipse, `P` Polygon, `T` Text, `A` Arrow. `Esc` exits Arrow mode.
 
@@ -67,7 +67,7 @@ If step 1 fails, **stop testing and report the Foundry v14 build number and firs
 - **Existing drawings:** Select them with Foundry's native Select tool, then click **Style Selected**. It changes only style fields; geometry, ownership, IDs, positions, existing flags, and attached data are untouched.
 - **Revert Style:** One batch, current scene, current browser session. It cannot restore deleted drawings or undo unrelated changes.
 - **Arrow:** The custom pointer overlay is active only while Arrow is chosen; right-click or press Esc to exit. It writes one native polygon Drawing with a namespaced `kind: arrow` flag. Arrows do not modify Foundry Walls or Regions.
-- **Selection safety:** Duplicate, Edit Text and Style Selected deliberately skip locked Drawings. The Quickbar can now lock selected drawings and show an unlockable list of locked Scene Drawings. Your existing painted gridlines are not automatically tagged or locked. To safeguard them today, manually lock them using Foundry's native Drawing/Placeables controls. Background/Working groups remain planned, not part of v0.1.2.
+- **Selection safety:** Duplicate, Edit Text and Style Selected deliberately skip locked Drawings. The Quickbar can now lock selected drawings and show an unlockable list of locked Scene Drawings. Your existing painted gridlines are not automatically tagged or locked. To safeguard them today, manually lock them using Foundry's native Drawing/Placeables controls. Background/Working groups remain planned, not part of v0.1.3.
 - **Preferences:** Per-browser Foundry client setting (`foundry-drawing-quickbar.preferences`); no world-level configuration or migrations.
 
 ## Rollback
@@ -76,7 +76,7 @@ If step 1 fails, **stop testing and report the Foundry v14 build number and firs
 2. To remove the module's files, stop Foundry and delete only `Z:\Data\modules\foundry-drawing-quickbar`, then restart.
 3. If a test modified important world data unexpectedly, restore the **matching world snapshot**, not merely the module directory. Rollback of a module folder cannot undo world data edits.
 
-## Known limits / non-goals in v0.1.2
+## Known limits / non-goals in v0.1.3
 
 - No changes to wall editing, elevation/levels, or native Foundry Drawing geometry handlers.
 - GM-only Quickbar launch. Players' standard Foundry drawing permissions are not changed.

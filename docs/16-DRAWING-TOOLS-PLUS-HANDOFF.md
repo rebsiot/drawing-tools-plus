@@ -31,6 +31,10 @@ The current module has native selection/freehand/rectangle/ellipse/polygon/text 
 
 **Release sequencing:** GitHub prerelease `v0.1.1` must be built and verified before moving the stable `main/module.json` manifest. Validate Arrow/duplicate/inline editor in a test world, then tackle the Selected Objects inspector/locking UX.
 
+## 16.1 update — v0.1.3: visible text/selection controls
+
+v0.1.3 supersedes v0.1.2 and places the Selected Drawings inspector/Lock actions immediately below the tool buttons (not after the style sliders). The actions collapse if no Drawings are selected, but recovery for locked Drawings remains visible. This is UI/packaging follow-through; all v0.1.2 native document and keyboard behavior carries forward, still pending live verification.
+
 ## 16.1 update — v0.1.2: text popup and selection/lock controls (2026-10-16)
 
 **Live user report:** Quickbar Text placement on the canvas caused letters to activate Quickbar shortcut tools. The GM requests a text-options box on map click with font-size choices, and clearly visible Lock/other actions when Drawings are selected.

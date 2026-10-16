@@ -1,5 +1,15 @@
 # Drawing Quickbar — Changelog
 
+## v0.1.3 — 2026-10-16 (beta)
+
+- **Improved visibility:** Selected Drawings inspector and Lock/Properties/Duplicate/Edit Text actions now appear immediately beneath the tool palette, above all style sliders and presets.
+- **Reduced clutter:** The action grid collapses when nothing is selected, while keeping Locked Drawings unlock accessible and Revert Style available when there is a style change to undo.
+- **Carried forward:** v0.1.2 shortcut suppression, text-placement popup and native Drawing locks. v0.1.2 is superseded for new installs.
+- **Safety:** Still no automatic locking or rewriting of existing Scene Drawings.
+- **Testing:** Automated Node, manifest and packaging tests; live Foundry verification pending.
+
+
+
 ## v0.1.2 — 2026-10-16 (beta)
 
 - **Fixed:** Single-letter Quickbar shortcuts no longer intercept Foundry native Text tool or native inline editing. Guarded against canvas text listeners, popup focus, composition and inputs.
