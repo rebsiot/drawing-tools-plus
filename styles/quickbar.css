@@ -1,0 +1,70 @@
+#foundry-drawing-quickbar {
+  position: fixed;
+  z-index: 120;
+  width: min(370px, calc(100vw - 18px));
+  max-height: calc(100vh - 20px);
+  overflow: hidden;
+  background: #20242c;
+  color: #f1f3f6;
+  border: 1px solid #67717e;
+  border-radius: 9px;
+  box-shadow: 0 10px 30px #0009;
+  font: 13px/1.35 var(--font-primary, Arial, sans-serif);
+  user-select: none;
+}
+#foundry-drawing-quickbar * { box-sizing: border-box; }
+#foundry-drawing-quickbar button {
+  appearance: none;
+  color: inherit;
+  background: #333a45;
+  border: 1px solid #586373;
+  border-radius: 5px;
+  padding: 7px;
+  min-width: 0;
+  line-height: 1.2;
+  cursor: pointer;
+  box-shadow: none;
+}
+#foundry-drawing-quickbar button:hover:not(:disabled) { background: #455566; border-color: #d4bc83; }
+#foundry-drawing-quickbar button:focus-visible { outline: 2px solid #d8b86a; outline-offset: 2px; }
+#foundry-drawing-quickbar button:disabled { opacity: .44; cursor: not-allowed; }
+#foundry-drawing-quickbar button.active { color: #161a1f; background: #edc777; border-color: #f6d99e; }
+#foundry-drawing-quickbar .dqb-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 11px;
+  background: #343c48;
+  border-bottom: 1px solid #59616b;
+  cursor: move;
+  touch-action: none;
+  font-weight: 700;
+}
+#foundry-drawing-quickbar .dqb-header small { margin-left: 4px; color: #b1b8c2; font-size: 10px; font-weight: 400; }
+#foundry-drawing-quickbar .dqb-header .dqb-icon { width: 26px; height: 26px; padding: 2px; }
+#foundry-drawing-quickbar .dqb-content { overflow: auto; max-height: calc(100vh - 90px); padding: 11px; }
+#foundry-drawing-quickbar .dqb-tools { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 5px; }
+#foundry-drawing-quickbar .dqb-tools button { display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 5px; height: 52px; font-size: 11px; }
+#foundry-drawing-quickbar .dqb-tools button i { font-size: 17px; }
+#foundry-drawing-quickbar .dqb-section-title { margin: 14px 0 7px; color: #b8c2cd; font-size: 10px; letter-spacing: .08em; font-weight: 700; }
+#foundry-drawing-quickbar .dqb-presets { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 5px; }
+#foundry-drawing-quickbar .dqb-presets button { padding: 7px 4px; font-size: 11px; }
+#foundry-drawing-quickbar .dqb-fields { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 10px 9px; padding: 12px 0 10px; }
+#foundry-drawing-quickbar .dqb-fields label { display: flex; flex-direction: column; gap: 4px; align-items: flex-start; font-size: 11px; color: #e1e5e9; }
+#foundry-drawing-quickbar .dqb-fields label.dqb-checkbox { justify-content: center; flex-direction: row; align-items: center; align-self: end; gap: 6px; }
+#foundry-drawing-quickbar input[type="color"] { width: 100%; max-width: 68px; height: 29px; padding: 1px; border: 1px solid #637185; background: #252b35; border-radius: 4px; cursor: pointer; }
+#foundry-drawing-quickbar input[type="checkbox"] { accent-color: #f1c66e; margin: 0; width: 16px; height: 16px; }
+#foundry-drawing-quickbar input[type="range"] { width: 100%; margin: 4px 0; accent-color: #e8c16d; }
+#foundry-drawing-quickbar .dqb-fields .dqb-wide { display: grid; grid-column: span 4; grid-template-columns: 1fr auto; gap: 3px 7px; width: 100%; align-items: center; }
+#foundry-drawing-quickbar .dqb-wide strong { justify-self: end; font-size: 11px; font-weight: 600; }
+#foundry-drawing-quickbar .dqb-wide input { grid-column: span 2; }
+#foundry-drawing-quickbar .dqb-option { display: flex; align-items: flex-start; gap: 7px; padding: 8px 0 11px; border-top: 1px solid #46505c; color: #d6dbe0; font-size: 11px; }
+#foundry-drawing-quickbar .dqb-actions { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; }
+#foundry-drawing-quickbar .dqb-help { margin-top: 10px; color: #bac3cc; font-size: 11px; line-height: 1.45; }
+#dqb-arrow-overlay { position: fixed; z-index: 15; inset: auto; background: transparent; cursor: crosshair; touch-action: none; pointer-events: auto; user-select: none; }
+#dqb-arrow-overlay svg { display: block; width: 100%; height: 100%; pointer-events: none; overflow: visible; }
+@media (max-width: 600px) {
+  #foundry-drawing-quickbar { width: min(340px, calc(100vw - 18px)); }
+  #foundry-drawing-quickbar .dqb-content { max-height: calc(100vh - 100px); }
+}

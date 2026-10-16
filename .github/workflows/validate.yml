@@ -1,0 +1,29 @@
+name: Validate Foundry module
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  test-and-package:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: JavaScript syntax
+        run: |
+          node --check scripts/main.js
+          node --check scripts/model.js
+      - name: Run automated tests
+        run: npm test
+      - name: Build complete module package
+        run: python3 tools/build_release.py
+      - name: Upload test artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: foundry-drawing-quickbar-beta
+          path: dist/*.zip

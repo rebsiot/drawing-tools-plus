@@ -1,0 +1,37 @@
+name: Publish beta GitHub Release
+on:
+  push:
+    tags:
+      - 'v*'
+permissions:
+  contents: write
+jobs:
+  prerelease:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Check tag matches module version
+        shell: bash
+        run: |
+          version="$(node -p 'JSON.parse(require("fs").readFileSync("module.json", "utf8")).version')"
+          test "$GITHUB_REF_NAME" = "v$version"
+      - name: JavaScript checks and unit tests
+        run: |
+          node --check scripts/main.js
+          node --check scripts/model.js
+          npm test
+      - name: Package module
+        run: python3 tools/build_release.py
+      - name: Publish prerelease (not a Foundry listing)
+        env:
+          GH_TOKEN: ${{ github.token }}
+        shell: bash
+        run: |
+          version="$(node -p 'JSON.parse(require("fs").readFileSync("module.json", "utf8")).version')"
+          gh release create "v$version" "dist/foundry-drawing-quickbar-$version.zip" \
+            --title "Drawing Tools+ v$version (beta)" \
+            --notes "System-independent Foundry v14 Drawing Quickbar beta. Automated tests run; live Foundry validation must be confirmed separately. See README.md and docs/TEST-REPORT.md." \
+            --prerelease
