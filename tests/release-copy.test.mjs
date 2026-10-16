@@ -3,7 +3,7 @@ import assert from "node:assert/strict";
 import {readFile} from "node:fs/promises";
 
 test("each published version has distinct, readable release notes", async () => {
-  for (let patch = 0; patch <= 7; patch++) {
+  for (let patch = 0; patch <= 8; patch++) {
     const version = "v0.1." + patch;
     const text = await readFile(new URL("../docs/releases/" + version + ".md", import.meta.url), "utf8");
     assert.ok(text.includes(version));

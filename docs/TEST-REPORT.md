@@ -1,6 +1,14 @@
-# Test Report — Drawing Quickbar v0.1.7
+# Test Report — Drawing Quickbar v0.1.8
 
 **Date:** 2026-10-16
+
+## v0.1.8 — Drawing Delete and Arrow endpoints (2026-10-16)
+
+**Reported live issue:** A row's "Remove" button did not delete a drawing and a line looked nearly invisible. Source proves Remove called local release() and did not itself update/delete the Drawing; the appearance change needs live reproduction to distinguish selected outline disappearing from actual style changes.
+
+**Changes verified by static and Node mock tests:** Deselect label only changes selection; Delete requires v14 DialogV2 confirmation of exact native Drawing ID with lock/Scene checks, uses native embedded-document deletion, and refuses locked objects. Arrowhead modes end/start/both/none remain single polygon Drawings; preview and persistence use the same points. Quickbar style updates keep arrow fill visible; selected-arrow line-width slider is disabled (geometry remains unchanged). Undo Style Change label reflects actual appearance-only restore.
+
+**Live verification outstanding:** Confirm/deletion behavior in current Foundry v14 build, cancel/no-destroy, line appearance after Deselect, all four arrow variants at zoom, arrow style changes and native locked gridline safety. Do not claim live success.
 
 ## v0.1.7 — Token Controls launcher (2026-10-16)
 

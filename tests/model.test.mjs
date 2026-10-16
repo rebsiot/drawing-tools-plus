@@ -1,10 +1,11 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import {
-  MODULE_ID, DEFAULT_PREFS, normalizePrefs, stylePatch,
+  MODULE_ID, DEFAULT_PREFS, ARROW_END_OPTIONS, normalizePrefs, stylePatch,
   arrowPoints, arrowDocumentData, duplicateDrawingData, textDocumentData, drawingLabel,
   drawingCenter, editTextPatch, findSceneDrawings,
   stylePreferencesFromDrawing, singleStylePatch, styleTargetMode,
+  visibleArrowStylePatch, isQuickbarArrow,
   shouldRunDrawingShortcut, snapshotStyle, shouldStyleNewDrawing, PRESETS
 } from '../scripts/model.js';
 
@@ -265,4 +266,50 @@ test('All Drawings can show more than 250 items without altering Scene data', ()
   assert.equal(findSceneDrawings(many, 'lost a').shown[0].id, 'drawing-301');
   assert.equal(findSceneDrawings(many, 'ellipse').matches, 152);
   assert.deepEqual(many, before);
+});
+
+test('arrow end options are validated and remembered without changing the module ID', () => {
+  assert.deepEqual(ARROW_END_OPTIONS, ['end','start','both','none']);
+  assert.equal(normalizePrefs({arrowEnds:'both'}).arrowEnds, 'both');
+  assert.equal(normalizePrefs({arrowEnds:'unknown'}).arrowEnds, 'end');
+  assert.equal(normalizePrefs({}).arrowEnds, 'end');
+  assert.equal(MODULE_ID, 'foundry-drawing-quickbar');
+});
+test('each arrowhead arrangement produces a single non-degenerate native polygon', () => {
+  const start={x:0,y:0}, end={x:100,y:0};
+  const expected={end:7,start:7,both:10,none:4};
+  for(const [ends,n] of Object.entries(expected)){
+    const points=arrowPoints(start,end,20,5,ends);
+    assert.equal(points.length,n,ends);
+    assert.ok(points.every(point=>Number.isFinite(point.x)&&Number.isFinite(point.y)));
+    if(ends==='end') assert.deepEqual(points[3],end);
+    if(ends==='start'||ends==='both') assert.deepEqual(points[0],start);
+    if(ends==='both') assert.deepEqual(points[5],end);
+    const native=arrowDocumentData(start,end,{...DEFAULT_PREFS,arrowEnds:ends});
+    assert.equal(native.shape.type,'p');
+    assert.equal(native.shape.points.length,2*n);
+    assert.equal(native.flags[MODULE_ID].ends,ends);
+    assert.equal(native.fillType,1);
+    assert.ok(native.fillAlpha >= .3);
+    assert.equal(native.strokeWidth,0);
+    assert.ok(native.shape.width>0&&native.shape.height>0);
+    assert.ok(!('_id' in native));
+  }
+  assert.equal(arrowPoints({x:NaN,y:0},end,20,5,'end'),null);
+  assert.equal(arrowPoints(start,end,-1,5,'both'),null);
+});
+test('arrow remains visible when selected styles turn fill off or change stroke color', () => {
+  const arrow=arrowDocumentData({x:0,y:0},{x:100,y:0},DEFAULT_PREFS);
+  assert.equal(isQuickbarArrow(arrow),true);
+  const outline=visibleArrowStylePatch(arrow,{...DEFAULT_PREFS,filled:false});
+  assert.equal(outline.fillType,1);
+  assert.equal(outline.strokeWidth,0);
+  assert.ok(outline.fillAlpha>=.3);
+  const color=visibleArrowStylePatch(arrow,{...DEFAULT_PREFS,strokeColor:'#ff0000'},'strokeColor');
+  assert.equal(color.fillColor,'#ff0000');
+  assert.ok(!('shape' in color),'Styling must not change arrow shape');
+  const faded=visibleArrowStylePatch(arrow,{...DEFAULT_PREFS,fillAlpha:0},'fillAlpha');
+  assert.ok(faded.fillAlpha>=.3,'Arrow never becomes transparent by quickbar styling');
+  assert.deepEqual(visibleArrowStylePatch({shape:{type:'r'}},{...DEFAULT_PREFS,filled:false}),stylePatch(DEFAULT_PREFS));
+  assert.equal(isQuickbarArrow({flags:{}}),false);
 });

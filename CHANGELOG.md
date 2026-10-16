@@ -2,6 +2,14 @@
 
 Short summaries of changes you can see in Foundry. See the [test report](docs/TEST-REPORT.md) for technical verification.
 
+## v0.1.8 — Clear Deletion, Arrow Ends, and Appearance Undo
+- **Clarified:** The old **Remove** button was actually Deselect. It is now labeled **Deselect** and never changes a Drawing's geometry or visibility.
+- **New:** **Delete** permanently removes exactly one unlocked native Drawing, but only after a Foundry confirmation identifying that object; no automatic bulk deletion.
+- **New:** Choose arrowheads on the **Start**, **End**, **Both**, or **Neither** end. One arrow is still one native polygon Drawing.
+- **Fixed:** Quickbar arrow styling preserves its filled silhouette, even when an outline preset would otherwise remove its visible fill. Existing arrow geometry is not rewritten.
+- **Renamed:** **Revert Style** → **Undo Style Change**, clarifying that it only restores the last Quickbar appearance change.
+- **Unchanged:** Module ID, native Drawings/locks/scene data, selection and Token launcher. A real Foundry v14 regression test is still needed.
+
 ## v0.1.7 — Drawing Quickbar from Token Controls
 - **New:** Drawing Quickbar appears in the **Tokens** controls as well as **Drawings** for the GM.
 - **Improved:** Opening from Tokens keeps the Token layer and selected tokens in place. Picking a Drawing tool switches to Drawings only when necessary.

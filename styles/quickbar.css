@@ -239,3 +239,28 @@
 #foundry-drawing-quickbar .dqb-finder-more[hidden] {
   display: none;
 }
+
+/* Keep Arrow options discoverable without crowding the shape buttons. */
+#foundry-drawing-quickbar .dqb-arrow-options {padding:8px 0 5px;}
+#foundry-drawing-quickbar .dqb-arrow-options label {
+  display:flex; align-items:center; justify-content:space-between;
+  gap:10px; font-size:12px; color:#e2e8ef;
+}
+#foundry-drawing-quickbar .dqb-arrow-options select {
+  width:55%; min-width:150px; min-height:30px;
+  color:#f2f5f8; background:#262f3a;
+  border:1px solid #718095; border-radius:5px; padding:3px 5px;
+}
+#foundry-drawing-quickbar .dqb-object-controls {
+  flex-wrap:wrap; justify-content:flex-end; max-width:62%;
+}
+/* Explicitly distinguish destructive action from Deselect. */
+#foundry-drawing-quickbar button.dqb-delete {
+  border-color:#965a60; color:#ffdcdd; background:#513339;
+}
+#foundry-drawing-quickbar button.dqb-delete:hover:not(:disabled) {
+  background:#693d44; border-color:#f2a9af;
+}
+#foundry-drawing-quickbar .dqb-fields input:disabled {
+  opacity:.48; cursor:not-allowed;
+}

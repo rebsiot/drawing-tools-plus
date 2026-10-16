@@ -109,6 +109,23 @@ v0.1.3 supersedes v0.1.2 and places the Selected Drawings inspector/Lock actions
 
 **Outstanding:** Background/Working groups and gridline protection enhancements in GitHub Issue #1 remain in the module thread.
 
+## 16.1 update — v0.1.8: Deselect versus Delete, arrow ends and style-only undo (2026-10-16)
+
+**User report:** Remove did not delete a Drawing, and a line appeared very thin/nearly invisible after using it. Wants choice of arrowheads and asks whether Revert Style means Undo.
+
+**Source finding:** In v0.1.7, Selected Drawings "Remove" was wired to `placeable.release()` (Deselect only), and never modified Scene Documents. Separately, saved Quickbar arrows are filled polygons with `strokeWidth: 0`; general Outline styling can remove fill and make them nearly invisible. Revert Style implements an independent, one-step restore of appearance fields only, not Foundry's general Undo.
+
+**v0.1.8 implementation (new beta; live Foundry v14 tests pending):**
+- Relabel selected-list **Remove** as **Deselect**. Add a clearly distinguished **Delete** action in Selected and All Drawings, only for unlocked native Drawing documents. Invoke v14 `DialogV2.confirm` with escaped name/kind and exact ID; cancel/default close does not delete. Re-check GM, Scene, ID and lock state before deleting exactly one ID through `Scene.deleteEmbeddedDocuments("Drawing", [id])`. No bulk delete, migration or auto-unlock. Undo Style Change never claims to restore deletion; back up the world before tests.
+- **Arrow ends:** `arrowEnds` in client preferences (default `end`), choices `start/end/both/none`, used in both preview and persisted native polygon. Version-2 namespaced `kind:arrow` flag records end choice; old flags still work. No custom drawing engine or asset changes.
+- **Arrow visibility:** v14 Quickbar arrow polygon relies on solid fill, so `visibleArrowStylePatch` preserves fill and visibility when Quickbar appearance presets/controls apply. Existing geometry is left untouched. Thickness controls are disabled on selected arrows (set width *before* creation or resize natively).
+- **Undo Style Change:** Rename prior Revert Style without changing single-step appearance snapshot logic. Not geometry, text or deletion Undo.
+- Preserve `foundry-drawing-quickbar` identity, native Drawing documents and protected painted gridlines. No changes to adjacent modules.
+
+**Test after installation:** On a disposable Scene, Deselect a Drawing and verify geometry and visual appearance persist; try Delete → Cancel (no change), Delete → Confirm (exact one removed); locked Drawing has no Delete action. Draw one arrow for each end configuration; test preview/persistence, style it with Outline and verify still visible after deselection. Run Undo Style Change only on appearance edits. Check console and unchanged gridlines after reload.
+
+**Release:** v0.1.8 must pass CI before manifest moves; v0.1.7 is rollback. CI does not equal live Foundry verification.
+
 ## Source of truth and GitHub release boundaries
 
 - Use the actual GitHub source at `rebsiot/drawing-tools-plus` (default branch `main`) and/or the newest verified working ZIP. Handoff notes describe intent but are not code.
