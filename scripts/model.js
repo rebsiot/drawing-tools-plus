@@ -192,3 +192,55 @@ export function shouldRunDrawingShortcut({
   return Boolean(activeLayer && tool !== "text" && !editableTarget && !nativeEditor &&
     !quickbarEditor && !isComposing && !repeated && !modified);
 }
+
+/** Center of a native Drawing in scene coordinates. Does not modify the Drawing. */
+export function drawingCenter(document) {
+  if (!document) return null;
+  const x = Number(document.x), y = Number(document.y);
+  const width = Number(document.shape?.width ?? 0);
+  const height = Number(document.shape?.height ?? 0);
+  if (![x, y, width, height].every(Number.isFinite)) return null;
+  return {x: x + width / 2, y: y + height / 2};
+}
+
+/** Only update text fields on one existing native Drawing, never its geometry or ID. */
+export function editTextPatch(document, text, preferences) {
+  if (!document?.id || document.locked || typeof text !== "string" ||
+      text.length > 2000 || !text.trim()) return null;
+  const p = normalizePrefs(preferences);
+  return {
+    _id: document.id,
+    text: text.replace(/\r\n?/g, "\n"),
+    fontSize: p.fontSize,
+    textColor: p.textColor
+  };
+}
+
+/** Search ALL Scene Drawing documents; exact text is more useful than generic names. */
+export function findSceneDrawings(documents, query = "", limit = 60) {
+  const all = [...(documents ?? [])].filter(doc => doc?.id);
+  const needle = String(query ?? "").trim().toLocaleLowerCase();
+  const priority = (doc) => {
+    if (!needle) return 0;
+    const label = String(doc.name ?? "").trim().toLocaleLowerCase();
+    const text = String(doc.text ?? "").trim().toLocaleLowerCase();
+    const type = drawingLabel(doc).kind.toLocaleLowerCase();
+    const id = String(doc.id ?? "").toLocaleLowerCase();
+    if (text === needle) return 0;
+    if (label === needle) return 1;
+    if (text.startsWith(needle)) return 2;
+    if (label.startsWith(needle)) return 3;
+    if (text.includes(needle)) return 4;
+    if (label.includes(needle)) return 5;
+    if (type.includes(needle)) return 6;
+    if (id.includes(needle)) return 7;
+    return Infinity;
+  };
+  const matched = all.map(doc => ({doc, score: priority(doc)}))
+    .filter(entry => Number.isFinite(entry.score))
+    .sort((a, b) => a.score - b.score ||
+      drawingLabel(a.doc).name.localeCompare(drawingLabel(b.doc).name) ||
+      a.doc.id.localeCompare(b.doc.id));
+  const safeLimit = Number.isFinite(limit) ? Math.max(1, Math.min(Math.trunc(limit), 250)) : 60;
+  return {total: all.length, matches: matched.length, shown: matched.slice(0, safeLimit).map(entry => entry.doc)};
+}

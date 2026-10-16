@@ -1,7 +1,8 @@
 import {
   MODULE_ID, DEFAULT_PREFS, PRESETS, normalizePrefs, stylePatch,
   snapshotStyle, arrowPoints, arrowDocumentData, duplicateDrawingData, textDocumentData,
-  drawingLabel, shouldRunDrawingShortcut, shouldStyleNewDrawing
+  drawingLabel, drawingCenter, findSceneDrawings, editTextPatch,
+  shouldRunDrawingShortcut, shouldStyleNewDrawing
 } from "./model.js";
 
 const TOOLS = new Set(["select", "rect", "ellipse", "polygon", "freehand", "text"]);
@@ -16,6 +17,11 @@ let textDialog = null;
 let textScene = null;
 let suspendShortcuts = false;
 let lastStyleUndo = null;
+let focusedDrawingId = null;
+let focusedSceneId = null;
+let focusMarker = null;
+let focusTimer = null;
+let focusSequence = 0;
 let saveQueue = Promise.resolve();
 let saveTimer = null;
 
@@ -91,7 +97,7 @@ function createDock() {
   root.setAttribute("aria-label", "Drawing Quickbar");
   root.innerHTML = `
     <div class="dqb-header">
-      <span><i class="fa-solid fa-pen-ruler" aria-hidden="true"></i> Drawing Quickbar <small>v0.1.3</small></span>
+      <span><i class="fa-solid fa-pen-ruler" aria-hidden="true"></i> Drawing Quickbar <small>v0.1.4</small></span>
       <button type="button" class="dqb-icon" data-action="close" aria-label="Close Drawing Quickbar" title="Close"><i class="fa-solid fa-xmark"></i></button>
     </div>
     <div class="dqb-content">
@@ -120,6 +126,16 @@ function createDock() {
           <div class="dqb-locked-list"></div>
         </details>
       </section>
+      <details class="dqb-finder" aria-label="Find drawing on this Scene">
+        <summary><i class="fa-solid fa-magnifying-glass" aria-hidden="true"></i> FIND DRAWING <span data-value="scene-drawing-count">0</span></summary>
+        <label class="dqb-find-label">
+          Search all Scene Drawings
+          <input type="search" data-role="drawing-search" aria-label="Search Scene Drawings" placeholder="Text, name, type or ID" autocomplete="off">
+        </label>
+        <small class="dqb-find-status" role="status"></small>
+        <div class="dqb-find-results"></div>
+        <p class="dqb-find-help">Locate centers and highlights a Drawing just for you. Select replaces the current selection.</p>
+      </details>
       <div class="dqb-section-title">QUICK STYLES</div>
       <div class="dqb-presets" role="group" aria-label="Style presets">
         <button type="button" data-preset="outline">Outline</button>
@@ -161,6 +177,9 @@ function createDock() {
       refreshSelectedPanel();
     }
     if (button.dataset.action === "unlock-one") await unlockDrawing(button.dataset.drawingId);
+    if (button.dataset.action === "locate-one") await locateDrawing(button.dataset.drawingId);
+    if (button.dataset.action === "select-only") selectOnlyDrawing(button.dataset.drawingId);
+    if (button.dataset.action === "edit-one-text") beginEditDrawingText(button.dataset.drawingId);
     if (button.dataset.action === "lock-selected") await lockSelected();
     if (button.dataset.action === "open-properties") await openSelectedProperties();
     if (button.dataset.action === "duplicate-selected") await duplicateSelected();
@@ -170,6 +189,10 @@ function createDock() {
   });
   root.addEventListener("input", event => {
     const input = event.target;
+    if (input instanceof HTMLInputElement && input.dataset.role === "drawing-search") {
+      refreshFinder();
+      return;
+    }
     if (!(input instanceof HTMLInputElement) || !input.name) return;
     if (input.type === "checkbox") preferences[input.name] = input.checked;
     else preferences[input.name] = input.type === "range" ? Number(input.value) : input.value;
@@ -190,6 +213,7 @@ async function openDock() {
   refreshToolHighlight();
 }
 function closeDock() {
+  clearFocusMarker();
   exitArrow();
   exitTextPlacement();
   dock?.remove();
@@ -231,24 +255,41 @@ function sceneDrawingDocuments() {
   const drawings = canvas?.scene?.drawings;
   return drawings?.contents ?? [...(drawings ?? [])];
 }
-function makeObjectRow(document, action, title) {
-  const label = drawingLabel(document);
-  const row = documentCreate("div", "dqb-object-row");
-  const details = documentCreate("span", "dqb-object-name");
-  details.textContent = label.name;
-  details.title = label.name + " (" + (document.id ?? "") + ")";
-  const sub = documentCreate("small", "dqb-object-kind");
-  sub.textContent = label.kind + (label.locked ? " · Locked" : "");
-  const summary = documentCreate("span", "dqb-object-summary");
-  summary.append(details, sub);
+function makeActionButton(doc, action, title, label) {
   const button = documentCreate("button", "dqb-mini");
   button.type = "button";
   button.dataset.action = action;
-  button.dataset.drawingId = document.id;
-  button.title = title;
-  button.setAttribute("aria-label", title + ": " + label.name);
-  button.textContent = action === "unlock-one" ? "Unlock" : "Remove";
-  row.append(summary, button);
+  button.dataset.drawingId = doc.id;
+  button.title = title + ": " + drawingLabel(doc).name;
+  button.setAttribute("aria-label", button.title);
+  button.textContent = label;
+  return button;
+}
+function makeObjectRow(document, action, title, finder = false) {
+  const label = drawingLabel(document);
+  const row = documentCreate("div", "dqb-object-row");
+  const details = documentCreate("span", "dqb-object-name");
+  // Prioritize actual text so a stray single-letter label can be located by name.
+  const textPreview = typeof document.text === "string" ? document.text.trim() : "";
+  details.textContent = textPreview ? textPreview.slice(0, 70) : label.name;
+  details.title = label.name + " (" + (document.id ?? "") + ")";
+  const sub = documentCreate("small", "dqb-object-kind");
+  sub.textContent = label.kind + (label.locked ? " · Locked" : "") +
+    (document.hidden ? " · Hidden" : "");
+  const summary = documentCreate("span", "dqb-object-summary");
+  summary.append(details, sub);
+  const actions = documentCreate("span", "dqb-object-controls");
+  actions.append(makeActionButton(document, "locate-one", "Pan and highlight", "Locate"));
+  if (action) {
+    const buttonTitle = action === "select-only" ? "Select only this Drawing (clear other selections)" : title;
+    const buttonText = action === "unlock-one" ? "Unlock" :
+      action === "select-only" ? "Select" : "Remove";
+    actions.append(makeActionButton(document, action, buttonTitle, buttonText));
+  }
+  if (finder && !document.locked && textPreview) {
+    actions.append(makeActionButton(document, "edit-one-text", "Edit this text Drawing", "Edit"));
+  }
+  row.append(summary, actions);
   return row;
 }
 function documentCreate(tag, className) {
@@ -282,6 +323,106 @@ function refreshSelectedPanel() {
   lockedList.replaceChildren(...(locked.length
     ? locked.map(doc => makeObjectRow(doc, "unlock-one", "Unlock drawing"))
     : [Object.assign(documentCreate("p", "dqb-empty"), {textContent: "No locked drawings"})]));
+  refreshFinder();
+}
+
+
+/** Search reads live Scene documents, including locked and currently unselected Drawings. */
+function refreshFinder() {
+  if (!dock) return;
+  const input = dock.querySelector('[data-role="drawing-search"]');
+  const results = dock.querySelector(".dqb-find-results");
+  const status = dock.querySelector(".dqb-find-status");
+  if (!input || !results || !status) return;
+  const found = findSceneDrawings(sceneDrawingDocuments(), input.value, 60);
+  dock.querySelector('[data-value="scene-drawing-count"]').textContent = String(found.total);
+  status.textContent = found.matches
+    ? "Showing " + found.shown.length + " of " + found.matches + " matches"
+    : "No matching Drawings";
+  results.replaceChildren(...(found.shown.length
+    ? found.shown.map(doc => makeObjectRow(doc,
+      doc.locked ? "unlock-one" : "select-only",
+      doc.locked ? "Unlock drawing" : "Select only this Drawing", true))
+    : [Object.assign(documentCreate("p", "dqb-empty"), {textContent: "Try a different search"})]));
+}
+function selectOnlyDrawing(id) {
+  if (!isUsable() || !canvas.drawings.active) return;
+  const doc = canvas.scene.drawings.get(id);
+  if (!doc || doc.locked) return notify("Unlock this Drawing before selecting it.");
+  const placeable = canvas.drawings.get(id);
+  if (!placeable) return notify("This Drawing has no visible canvas object. Locate is still available.");
+  try {
+    // A deliberate one-object selection avoids accidentally editing painted grids.
+    canvas.drawings.releaseAll();
+    if (!placeable.control({releaseOthers: true})) return notify("Foundry could not select this Drawing.");
+    refreshSelectedPanel();
+  } catch (error) {
+    console.error(MODULE_ID + " | Select Drawing failed", error);
+    notify("Could not select Drawing. See console.", "error");
+  }
+}
+/** This is a local HTML marker, never a Scene Drawing and never a broadcast ping. */
+function clearFocusMarker() {
+  focusSequence++;
+  if (focusTimer !== null) clearTimeout(focusTimer);
+  focusTimer = null;
+  focusMarker?.remove();
+  focusMarker = null;
+  focusedDrawingId = null;
+  focusedSceneId = null;
+}
+function refreshFocusMarker() {
+  if (!focusMarker || !canvas?.scene || canvas.scene.id !== focusedSceneId) return;
+  const doc = canvas.scene.drawings.get(focusedDrawingId);
+  if (!doc || typeof canvas.clientCoordinatesFromCanvas !== "function") return clearFocusMarker();
+  const center = drawingCenter(doc);
+  if (!center) return clearFocusMarker();
+  const pt = canvas.clientCoordinatesFromCanvas(center);
+  const corner = canvas.clientCoordinatesFromCanvas({x: doc.x, y: doc.y});
+  const opposite = canvas.clientCoordinatesFromCanvas({
+    x: doc.x + (doc.shape?.width || 0), y: doc.y + (doc.shape?.height || 0)
+  });
+  if (![pt.x,pt.y,corner.x,corner.y,opposite.x,opposite.y].every(Number.isFinite)) return;
+  const w = Math.min(360, Math.max(82, Math.abs(opposite.x - corner.x) + 24));
+  const h = Math.min(260, Math.max(82, Math.abs(opposite.y - corner.y) + 24));
+  focusMarker.style.left = Math.round(pt.x) + "px";
+  focusMarker.style.top = Math.round(pt.y) + "px";
+  focusMarker.style.width = Math.round(w) + "px";
+  focusMarker.style.height = Math.round(h) + "px";
+}
+async function locateDrawing(id) {
+  if (!isUsable()) return notify("Open a Scene to locate Drawings.");
+  const doc = canvas.scene.drawings.get(id);
+  const center = drawingCenter(doc);
+  if (!doc || !center) return notify("Drawing location is unavailable.");
+  clearFocusMarker();
+  const request = ++focusSequence;
+  const sceneId = canvas.scene.id;
+  try {
+    const width = Math.abs(doc.shape?.width ?? 0), height = Math.abs(doc.shape?.height ?? 0);
+    const view = {x: center.x, y: center.y, duration: 450};
+    if (Math.max(width,height) < 120) {
+      view.scale = Math.min(2, Math.max(1.3, canvas.stage?.scale?.x ?? 1));
+    }
+    await canvas.animatePan(view);
+    if (!dock || !canvas.scene || canvas.scene.id !== sceneId || request !== focusSequence) return;
+    focusMarker = documentCreate("div", "dqb-focus-marker");
+    focusMarker.id = "dqb-focus-marker";
+    focusMarker.setAttribute("aria-hidden", "true");
+    const label = documentCreate("span", "dqb-focus-caption");
+    const text = doc.text?.trim();
+    label.textContent = (text ? text.slice(0, 50) : drawingLabel(doc).name) +
+      (doc.hidden ? " (hidden)" : "");
+    focusMarker.append(label);
+    document.body.append(focusMarker);
+    focusedDrawingId = doc.id;
+    focusedSceneId = sceneId;
+    refreshFocusMarker();
+    focusTimer = setTimeout(clearFocusMarker, 7000);
+  } catch(error) {
+    console.error(MODULE_ID + " | Locate Drawing failed", error);
+    notify("Could not center this Drawing. See console.", "error");
+  }
 }
 
 async function lockSelected() {
@@ -362,23 +503,25 @@ async function duplicateSelected() {
 function editSelectedText() {
   if (!isUsable() || !canvas.drawings.active) return notify("Open the Drawings layer and select one drawing.");
   const sources = selectedEditableObjects();
-  const totalSelected = canvas.drawings.controlled?.length ?? 0;
-  if (totalSelected !== 1 || sources.length !== 1) {
-    return notify("Select exactly one unlocked drawing to edit its text.");
+  if (selectedDrawingObjects().length !== 1 || sources.length !== 1) {
+    return notify("Select exactly one unlocked Drawing to edit text.");
   }
-  const placeable = sources[0];
-  if (typeof placeable.enableTextEditing !== "function") {
-    return notify("This Foundry build does not expose the native inline text editor.", "error");
-  }
-  try {
-    // A PIXI-based native editor may receive keys at document level rather than a DOM input.
-    suspendShortcuts = true;
-    placeable.enableTextEditing();
-  }
-  catch (error) {
-    console.error(`${MODULE_ID} | Inline text editing failed`, error);
-    notify("Could not open the native inline text editor. See console.", "error");
-  }
+  beginEditDrawingText(sources[0].document.id);
+}
+/** Reuse the reliable focused popup instead of Foundry's context-sensitive text-edit handler. */
+function beginEditDrawingText(id) {
+  if (!isUsable() || !canvas.drawings.active) return notify("Open the Drawings layer first.");
+  const doc = canvas.scene.drawings.get(id);
+  if (!doc) return notify("This Drawing no longer exists.");
+  if (doc.locked) return notify("Unlock this Drawing before editing its text.");
+  if (textDialog) return notify("Finish or cancel the current text entry first.");
+  exitArrow();
+  exitTextPlacement();
+  const center = drawingCenter(doc);
+  if (!center) return notify("Cannot position the text editor.");
+  const pos = canvas.clientCoordinatesFromCanvas(center);
+  textScene = {sceneId: canvas.scene.id, drawingId: doc.id};
+  showTextDialog(pos.x, pos.y);
 }
 
 async function styleSelected() {
@@ -568,11 +711,14 @@ function enterTextPlacement() {
 }
 function showTextDialog(clientX, clientY) {
   if (!textScene || textDialog) return;
+  const editing = Boolean(textScene.drawingId);
+  const original = editing ? canvas.scene.drawings.get(textScene.drawingId) : null;
+  if (editing && (!original || original.locked)) return notify("Unlock this Drawing before editing its text.");
   const popup = document.createElement("form");
   popup.id = "dqb-text-dialog";
-  popup.setAttribute("aria-label", "Text options");
+  popup.setAttribute("aria-label", editing ? "Edit Drawing text" : "Text options");
   popup.innerHTML = `
-    <div class="dqb-text-dialog-title">Place Text
+    <div class="dqb-text-dialog-title">${editing ? "Edit Text" : "Place Text"}
       <button type="button" data-action="cancel-text" title="Cancel text placement" aria-label="Cancel text placement">&times;</button>
     </div>
     <label>Text <textarea name="drawingText" rows="3" maxlength="2000" placeholder="Type your label here" required></textarea></label>
@@ -593,15 +739,21 @@ function showTextDialog(clientX, clientY) {
     </div>
     <div class="dqb-text-dialog-actions">
       <button type="button" data-action="cancel-text">Cancel</button>
-      <button type="submit" class="dqb-primary">Place Text</button>
+      <button type="submit" class="dqb-primary">${editing ? "Save Changes" : "Place Text"}</button>
     </div>`;
   document.body.append(popup);
   textDialog = popup;
   popup.style.left = Math.max(8, Math.min(window.innerWidth - 338, clientX + 15)) + "px";
   popup.style.top = Math.max(8, Math.min(window.innerHeight - 340, clientY + 15)) + "px";
-  popup.elements.namedItem("fontSize").value = String(preferences.fontSize);
-  popup.elements.namedItem("textColor").value = preferences.textColor;
-  popup.elements.namedItem("fontSizePreset").value = String(preferences.fontSize);
+  const initial = normalizePrefs({
+    ...preferences,
+    fontSize: Number.isFinite(original?.fontSize) ? original.fontSize : preferences.fontSize,
+    textColor: original?.textColor ?? preferences.textColor
+  });
+  popup.elements.namedItem("drawingText").value = original?.text ?? "";
+  popup.elements.namedItem("fontSize").value = String(initial.fontSize);
+  popup.elements.namedItem("textColor").value = initial.textColor;
+  popup.elements.namedItem("fontSizePreset").value = String(initial.fontSize);
   popup.addEventListener("click", event => {
     if (event.target.closest('[data-action="cancel-text"]')) exitTextPlacement();
   });
@@ -631,27 +783,39 @@ function showTextDialog(clientX, clientY) {
       ...preferences, fontSize: Number(popup.elements.namedItem("fontSize").value),
       textColor: popup.elements.namedItem("textColor").value
     });
-    const createdData = textDocumentData(textScene.position, raw, newPreferences);
-    if (!createdData) return notify("Enter text and a valid font size.", "warn");
+    const operation = {...textScene};
+    const existing = operation.drawingId ? canvas.scene.drawings.get(operation.drawingId) : null;
+    const patch = operation.drawingId
+      ? editTextPatch(existing, raw, newPreferences)
+      : textDocumentData(operation.position, raw, newPreferences);
+    if (!patch) return notify("Enter text and a valid font size; locked Drawings cannot be edited.", "warn");
     const button = popup.querySelector('[type="submit"]');
     button.disabled = true;
     try {
-      const created = await canvas.scene.createEmbeddedDocuments("Drawing", [createdData]);
-      if (!created?.length) throw new Error("No Drawing created");
-      preferences = newPreferences;
-      safeSave();
-      updateDockInputs();
-      try { canvas.drawings.storeHistory("create", created.map(doc => doc.toObject())); }
-      catch(error) { console.debug(MODULE_ID + " | Native text undo not available", error); }
-      exitTextPlacement();
-      try {
-        canvas.drawings.releaseAll();
-        canvas.drawings.get(created[0].id)?.control({releaseOthers: false});
-      } catch(error) { console.debug(MODULE_ID + " | Could not select new text", error); }
+      if (operation.drawingId) {
+        // Only text, fontSize and textColor change. Position, shape, lock, flags and ID persist.
+        const updated = await canvas.scene.updateEmbeddedDocuments("Drawing", [patch]);
+        if (!updated?.length) throw new Error("No Drawing was updated");
+        exitTextPlacement();
+        notify("Drawing text updated.", "info");
+      } else {
+        const created = await canvas.scene.createEmbeddedDocuments("Drawing", [patch]);
+        if (!created?.length) throw new Error("No Drawing created");
+        preferences = newPreferences;
+        safeSave();
+        updateDockInputs();
+        try { canvas.drawings.storeHistory("create", created.map(doc => doc.toObject())); }
+        catch(error) { console.debug(MODULE_ID + " | Native text undo not available", error); }
+        exitTextPlacement();
+        try {
+          canvas.drawings.releaseAll();
+          canvas.drawings.get(created[0].id)?.control({releaseOthers: false});
+        } catch(error) { console.debug(MODULE_ID + " | Could not select new text", error); }
+      }
       refreshSelectedPanel();
     } catch(error) {
-      console.error(MODULE_ID + " | Could not place text", error);
-      notify("Could not place text. See console.", "error");
+      console.error(MODULE_ID + " | Could not save Drawing text", error);
+      notify("Could not save Drawing text. See console.", "error");
       button.disabled = false;
     }
   });
@@ -669,8 +833,8 @@ function onKeydown(event) {
   // Foundry's native Text tool listens on document, not necessarily an input.
   const editable = "input, textarea, select, [contenteditable], [role='textbox']";
   const isEditable = el => el instanceof Element && Boolean(el.closest(editable));
-  const nativeEditor = Boolean(suspendShortcuts ||
-    [...(canvas.drawings.placeables ?? [])].some(item => Boolean(item?._onkeydown)));
+  // Do not mistake a Drawing's _onkeydown handler method for an active editor.
+  const nativeEditor = Boolean(suspendShortcuts);
   if (!shouldRunDrawingShortcut({
     tool: ui.controls?.tool?.name,
     activeLayer: canvas.drawings.active,
@@ -723,6 +887,7 @@ Hooks.once("ready", () => {
   Hooks.on("updateDrawing", refreshSelectedPanel);
   Hooks.on("createDrawing", refreshSelectedPanel);
   Hooks.on("deleteDrawing", refreshSelectedPanel);
+  Hooks.on("canvasPan", refreshFocusMarker);
   Hooks.on("renderSceneControls", () => {
     refreshToolHighlight();
     refreshSelectedPanel();
@@ -738,11 +903,12 @@ Hooks.once("ready", () => {
   window.addEventListener("resize", () => {
     updateArrowBounds();
     updateTextBounds();
+    refreshFocusMarker();
   });
   document.addEventListener("keydown", onKeydown);
   document.addEventListener("pointerdown", event => {
     // A tool switch or Scene navigation should never leave an invisible input shield over the canvas.
     if (arrowOverlay && !arrowOverlay.contains(event.target) && !dock?.contains(event.target) && !canvas?.drawings?.active) exitArrow();
   });
-  console.info(`${MODULE_ID} | v0.1.3 ready (Foundry v14 native Drawing workflow)`);
+  console.info(`${MODULE_ID} | v0.1.4 ready (Foundry v14 native Drawing workflow)`);
 });

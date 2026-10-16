@@ -1,8 +1,8 @@
-# Drawing Tools+ / Drawing Quickbar - v0.1.3 beta (2026-10-16)
+# Drawing Tools+ / Drawing Quickbar - v0.1.4 beta (2026-10-16)
 
 Project repository: https://github.com/rebsiot/drawing-tools-plus
 
-**Beta release:** https://github.com/rebsiot/drawing-tools-plus/releases/tag/v0.1.3
+**Beta release:** https://github.com/rebsiot/drawing-tools-plus/releases/tag/v0.1.4
 
 **Permanent Foundry install/update manifest:**
 `https://raw.githubusercontent.com/rebsiot/drawing-tools-plus/main/module.json`
@@ -11,7 +11,7 @@ Project repository: https://github.com/rebsiot/drawing-tools-plus
 
 A **system-independent Foundry VTT v14 beta** for making the existing **Drawings** layer less cumbersome. This is not a wall-building tool, nor does it replace Foundry's Drawing documents, native drawing editor, scene persistence, selection, or normal deletion.
 
-**Status:** User reported that Quickbar text entry in live Foundry v14 triggered letter shortcuts. v0.1.3 adds a focused text popup, disables shortcuts during text entry, and provides selected-Drawing actions and a locked-Drawing recovery list. These changes require live Foundry verification; test on a backed-up Scene.
+**Status:** Initial Quickbar operations work in the user's Foundry v14 test world; an experimental v0.1.1 Arrow fix and later editing controls remain individually subject to live checks. v0.1.4 adds Find Drawing / Locate and replaces unreliable native inline Edit Text invocation with a focused edit form. Run a test on a backed-up Scene before using production artwork.
 
 ## What it adds
 
@@ -23,7 +23,9 @@ A **system-independent Foundry VTT v14 beta** for making the existing **Drawings
 - Optional **Use this style for new drawings** while the Quickbar remains open. Styles are applied via the documented `preCreateDrawing` hook, without altering existing drawings.
 - **Duplicate** creates offset copies of the selected, unlocked native Drawings without changing their originals, IDs or linked data. **Edit Text** opens Foundry v14's built-in inline text editor for exactly one selected, unlocked Drawing.
 - **Text popup:** Quickbar Text changes into a placement cursor. Click the map to open a focused text box with size presets, custom pixel size and text color. **Place Text** creates one native rectangle Drawing carrying the label. Cancel/Escape creates nothing.
-- **Selected Drawings:** Immediately beneath the tool buttons, show selected Drawings by name/type with a Remove (deselect) control and clearly visible Lock, Properties, Duplicate, Edit Text and Style Selected actions. The action row collapses when nothing is selected, except for Revert Style when an undo exists. Lock uses the native `locked` field; expand **Locked Drawings** to unlock any locked Drawing in this Scene.
+- **Selected Drawings:** Immediately beneath the tool buttons, show selected Drawings by name/type with **Locate** and Remove (deselect) plus clearly visible Lock, Properties, Duplicate, Edit Text and Style Selected actions. The action row collapses when nothing is selected, except for Revert Style when an undo exists.
+- **Find Drawing:** Expand the Finder and search **all** native Scene Drawings by displayed text, name, type or ID. Exact text is ranked first (useful for a stray letter `a`). **Locate** pans your local camera and flashes a temporary marker for seven seconds; **Select** explicitly replaces the current selection for unlocked objects. Locked and hidden drawings are identified. The Finder does not modify world data or broadcast to players.
+- **Edit Text improved:** The Edit Text action (or Edit from a Finder text result) opens the same focused text-size/color popup used for new labels. It prefills the selected Drawing's existing content and saves only text, font size and text color to the original native Drawing, preserving geometry and document ID. Lock uses the native `locked` field; expand **Locked Drawings** to unlock any locked Drawing in this Scene.
 - **Style Selected** applies the chosen style to selected, unlocked native Drawing documents; **Revert Style** reverses the last such batch made by this module during the current scene session.
 - Shortcuts while the Quickbar is open and the Drawings layer is active (but never during native or popup text editing): `V` Select, `F` Freehand, `R` Rectangle, `E` Ellipse, `P` Polygon, `T` Text, `A` Arrow. `Esc` exits Arrow mode.
 
@@ -56,8 +58,9 @@ Selection, moving, resizing, native Drawing configuration, and shape creation ou
 3. Click **Arrow**, drag a line on the map and release. Verify it appears as one solid polygon arrow, can be selected/moved and persists after reload. Test Arrow at two zoom levels and undo once.
 4. Select a test rectangle and choose **Duplicate**. Check that one offset copy appears and the original remains unchanged. Select only the copy, then choose **Edit Text**; verify Foundry's inline editor opens and the entered text persists.
 5. Select Quickbar **Text**, click an empty part of the map, type a label containing letters V, R, T and A, select a font size, and press **Place Text**. Verify no tool switches, then reload to check persistence.
-6. Select a disposable Drawing and check that its identity appears under **Selected Drawings**, with Lock, Properties, Duplicate and Edit Text visible. Click Lock, verify it can no longer be manipulated on the canvas, then expand **Locked Drawings** and unlock it. Confirm the drawing still exists unchanged.
-7. Make sure existing Drawings, Walls, Tiles and tokens still behave normally. Check the browser console for errors.
+6. Open **Find Drawing**, search for a stray character such as `a`, and click **Locate**. Verify the canvas pans, shows a temporary glowing outline around its location, and no other player's view changes. For unlocked results, use **Select** (replaces any other selection). For text results, use **Edit**, change the label and font size, Save Changes, then verify position, ID and other fields are unchanged.
+7. Select a disposable Drawing and check its identity appears under **Selected Drawings**, with Locate, Lock, Properties, Duplicate and Edit Text visible. Click Lock, verify it cannot be manipulated on the canvas, then expand **Locked Drawings** and unlock it. Verify the drawing still exists unchanged.
+8. Make sure existing Drawings, Walls, Tiles and tokens still behave normally. Check the browser console for errors.
 
 If step 1 fails, **stop testing and report the Foundry v14 build number and first console error**. Do not test on important world Scenes until a basic creation check passes.
 
@@ -76,14 +79,14 @@ If step 1 fails, **stop testing and report the Foundry v14 build number and firs
 2. To remove the module's files, stop Foundry and delete only `Z:\Data\modules\foundry-drawing-quickbar`, then restart.
 3. If a test modified important world data unexpectedly, restore the **matching world snapshot**, not merely the module directory. Rollback of a module folder cannot undo world data edits.
 
-## Known limits / non-goals in v0.1.3
+## Known limits / non-goals in v0.1.4
 
 - No changes to wall editing, elevation/levels, or native Foundry Drawing geometry handlers.
 - GM-only Quickbar launch. Players' standard Foundry drawing permissions are not changed.
 - Keyboard shortcuts are active only with the panel open and the Drawings layer selected.
 - The Arrow's invalid `f` type was reported live on v0.1.0. It now uses a native `p` polygon silhouette; pan/zoom geometry, text editor activation, copy selection and Arrow undo remain unverified live.
 - Styling of preexisting Drawings is deliberately manual. It does not bulk migrate any world or Scene data.
-- Not yet a full Excalidraw-style editor: a selection inspector and native lock controls exist, but background/working groups, alignment, snapping enhancements, custom resize handles, and generalized history are not implemented. Inline text editing uses Foundry's native editor; new labels use a focused popup that creates native Drawings.
+- Not yet a full Excalidraw-style editor: selection inspector, Finder, native lock controls and editable text popup exist, but background/working groups, alignment, snapping enhancements, custom resize handles and generalized history are not implemented. Text edits via Quickbar use the focused form, rather than Foundry's context-sensitive inline handler. Existing text shape dimensions are preserved; resize its native Drawing if longer text is clipped.
 - Source is maintained at https://github.com/rebsiot/drawing-tools-plus, with beta release ZIPs and an install/update manifest. This **GitHub beta is not listed in Foundry's official package directory**.
 - Software is distributed under the [Personal Use Only (No Redistribution)](LICENSE.md) source-available proprietary license. Public GitHub visibility does not authorize redistribution.
 

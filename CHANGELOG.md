@@ -1,5 +1,18 @@
 # Drawing Quickbar — Changelog
 
+## v0.1.4 — 2026-10-16 (beta)
+
+- **Added:** Find Drawing expandable inspector searches all current Scene native Drawing documents by text/name/type/ID, prioritizing exact text (e.g. a stray 'a'), including locked and hidden drawings. Limits displayed results to 60 with counts; no automatic selection or world modifications.
+- **Added:** Locate button on selected, locked and finder Drawings uses local canvas.animatePan and a seven-second CSS marker that tracks pan/zoom. Never broadcasts a canvas ping to other clients.
+- **Added:** Finder Select explicitly selects only that unlocked native Drawing, clearing other selections to reduce accidental deletions/edits. Finder Edit opens the focused text form for an unlocked text Drawing.
+- **Fixed:** Quickbar Edit Text no longer relies on the unreliable native enableTextEditing() handoff. Prefilled text, size and color are edited in a focused dialog, saving only those fields on the existing Drawing (same ID, position, geometry, lock and flags).
+- **Fixed:** Shortcut interception no longer treats every Drawing's event method as evidence of an active text editor. Normal hotkeys still pause in native text mode, form inputs and overlays.
+- **Preserved:** Existing module ID, drawing flags, permissions, styles, saved preferences, gridlines, other Scene objects and source-available proprietary license.
+- **Testing:** Node model, wiring, version metadata and ZIP builder in GitHub Actions; no live Foundry testing claimed for v0.1.4.
+- **Next:** Explore background/working groups and more direct manipulation, while retaining native Foundry Documents and safe locking.
+
+
+
 ## v0.1.3 — 2026-10-16 (beta)
 
 - **Improved visibility:** Selected Drawings inspector and Lock/Properties/Duplicate/Edit Text actions now appear immediately beneath the tool palette, above all style sliders and presets.

@@ -1,6 +1,13 @@
-# Test Report — Drawing Quickbar v0.1.3
+# Test Report — Drawing Quickbar v0.1.4
 
 **Date:** 2026-10-16
+
+## v0.1.4 beta — Finder and Edit Text improvements (2026-10-16)
+
+**Source inspection:** Existing v0.1.3 source in GitHub `main` with module ID `foundry-drawing-quickbar`; uses native Drawing documents. Reported live: stray text is hard to locate, selected Edit Text feels unreliable.
+**Automated coverage added:** Pure finder ordering/exact-text matching and locked document discoverability; center calculation; conservative native text-only patch; UI source-wiring checks that show local-only `canvas.animatePan` and prefilled text update, and that no network ping or substitute drawing engine is introduced.
+**Live state:** **Not yet validated** in the user's Foundry client. Test Finder pane search 'a', local Locate on a tiny/locked Drawing, edit popup save preserving ID/geometry and automatic escape/shortcut behavior.
+**Safety:** No data migrations, deletion, scene import, automatic locks or modification to Drawings merely from opening Finder. Locator is temporary DOM only.
 
 ## v0.1.3 beta — selected UI visibility pass (2026-10-16)
 

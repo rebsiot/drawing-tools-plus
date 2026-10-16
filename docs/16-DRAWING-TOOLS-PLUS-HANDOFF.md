@@ -31,6 +31,20 @@ The current module has native selection/freehand/rectangle/ellipse/polygon/text 
 
 **Release sequencing:** GitHub prerelease `v0.1.1` must be built and verified before moving the stable `main/module.json` manifest. Validate Arrow/duplicate/inline editor in a test world, then tackle the Selected Objects inspector/locking UX.
 
+## 16.1 update — v0.1.4: Find Drawing, local focus and stable text editing (2026-10-16)
+
+**User feedback on v0.1.3:** Most features work; a tiny stray single-letter 'a' on the map could not be found, and Edit Text felt unreliable. Wants pan/highlight for Drawings and continued editing progress.
+
+**Developed in v0.1.4 (automatic/mock verification only, pending actual live test):**
+- Expandable **Find Drawing** below selection controls searches every current Scene Drawing (including locked/hidden) by text/name/type/document ID. Exact text matches sort ahead of generic names. 60 results maximum at once to keep the panel responsive; refine search for large grids.
+- **Locate** actions in selected, locked and Finder lists call `canvas.animatePan`, then draw a short-lived HTML/CSS focus ring following Canvas pan/zoom. No persistent world geometry and no broadcast ping.
+- **Select** from finder clears prior selections, then controls only the explicit unlocked target. Hidden/locked objects are still findable/locatable but not force-selected.
+- **Edit Text** button and Finder text Edit both open the same prefilled text popup used for creating labels; native `updateEmbeddedDocuments("Drawing",...)` patches only `text`, `fontSize`, `textColor`. No replacement document, ID/shape/flags/position changes. Locked target cannot be edited.
+- Fix earlier native text shortcut detection mistakenly treating any present `_onkeydown` method as an active text editor. Native Text tool and focused text inputs still suppress shortcuts.
+- **Still planned:** logical Background/Working groups, safe delete only with exact-target confirmation, and further manipulation tools. Keep GitHub Issue #1 open.
+
+**Regression test requested:** In an expendable Scene with a stray 'a', Find Drawing > search a > Locate (local pan + ring), Edit to rename and change size, confirm it stays one Drawing after reload; select and lock test Drawings, ensure painted gridlines are not modified; test existing tools and shortcuts. Verify on the live v14 build. If UI fails, save first browser console error.
+
 ## 16.1 update — v0.1.3: visible text/selection controls
 
 v0.1.3 supersedes v0.1.2 and places the Selected Drawings inspector/Lock actions immediately below the tool buttons (not after the style sliders). The actions collapse if no Drawings are selected, but recovery for locked Drawings remains visible. This is UI/packaging follow-through; all v0.1.2 native document and keyboard behavior carries forward, still pending live verification.
