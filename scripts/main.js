@@ -2,7 +2,7 @@ import {
   MODULE_ID, DEFAULT_PREFS, PRESETS, normalizePrefs, stylePatch,
   snapshotStyle, arrowPoints, arrowDocumentData, duplicateDrawingData, textDocumentData,
   drawingLabel, drawingCenter, findSceneDrawings, editTextPatch,
-  stylePreferencesFromDrawing, singleStylePatch, styleTargetMode,
+  stylePreferencesFromDrawing, singleStylePatch, styleTargetMode, visibleArrowStylePatch, isQuickbarArrow,
   shouldRunDrawingShortcut, shouldStyleNewDrawing
 } from "./model.js";
 
@@ -60,6 +60,16 @@ function renderStyleInputs() {
   }
   dock.querySelector('[name="filled"]').checked = style.filled;
   dock.querySelector('[name="autoStyle"]').checked = preferences.autoStyle;
+  dock.querySelector('[name="arrowEnds"]').value = preferences.arrowEnds;
+  const selected = selectedDrawingObjects();
+  const selectedArrow = selected.length === 1 && isQuickbarArrow(selected[0]?.document);
+  const width = dock.querySelector('[name="strokeWidth"]');
+  if (width) {
+    width.disabled = selectedArrow;
+    width.title = selectedArrow
+      ? "Arrow thickness is fixed when drawn; set line width first, or use the native Drawing resize handles."
+      : "Line width";
+  }
   dock.querySelector('[data-value="strokeWidth"]').textContent = `${style.strokeWidth}px`;
   dock.querySelector('[data-value="fillAlpha"]').textContent = `${Math.round(style.fillAlpha * 100)}%`;
   dock.querySelector('[data-value="fontSize"]').textContent = `${style.fontSize}px`;
@@ -82,7 +92,9 @@ function synchronizeStyleTarget(selected) {
   dock.classList.toggle("dqb-multi-selection", mode.mode === "batch");
   const hint = dock.querySelector('[data-role="style-scope"]');
   if (hint) hint.textContent = mode.mode === "single"
-    ? "Editing this Drawing now. Changes apply immediately."
+    ? (isQuickbarArrow(selected[0]?.document)
+      ? "Editing an arrow: its color/opacity can change, but thickness is set before drawing."
+      : "Editing this Drawing now. Changes apply immediately.")
     : mode.mode === "batch"
       ? `${mode.count} unlocked selected. Adjust the controls, then Apply to All Selected.`
       : "Setting new-Drawing defaults. Presets are built in; no saving required.";
@@ -176,7 +188,7 @@ function createDock() {
   root.setAttribute("aria-label", "Drawing Quickbar");
   root.innerHTML = `
     <div class="dqb-header">
-      <span><i class="fa-solid fa-pen-ruler" aria-hidden="true"></i> Drawing Quickbar <small>v0.1.7</small></span>
+      <span><i class="fa-solid fa-pen-ruler" aria-hidden="true"></i> Drawing Quickbar <small>v0.1.8</small></span>
       <button type="button" class="dqb-icon" data-action="close" aria-label="Close Drawing Quickbar" title="Close"><i class="fa-solid fa-xmark"></i></button>
     </div>
     <div class="dqb-content">
@@ -189,6 +201,16 @@ function createDock() {
         <button type="button" data-tool="text" title="Text (T)"><i class="fa-solid fa-font"></i><span>Text</span></button>
         <button type="button" data-tool="arrow" title="Draw an arrow by dragging (A)"><i class="fa-solid fa-arrow-right-long"></i><span>Arrow</span></button>
       </div>
+      <div class="dqb-arrow-options">
+        <label>Arrow ends
+          <select name="arrowEnds" aria-label="Arrowhead placement for new arrows">
+            <option value="end">End only (default)</option>
+            <option value="start">Start only</option>
+            <option value="both">Both ends</option>
+            <option value="none">No arrowheads</option>
+          </select>
+        </label>
+      </div>
       <section class="dqb-selection" aria-label="Selected drawings">
         <div class="dqb-section-title">SELECTED DRAWINGS <strong data-value="selected-count">0</strong></div>
         <div class="dqb-selected-list" aria-live="polite"></div>
@@ -198,7 +220,7 @@ function createDock() {
           <button type="button" data-action="duplicate-selected" title="Duplicate selected, unlocked native drawings, offset 24 pixels"><i class="fa-solid fa-copy"></i> Duplicate</button>
           <button type="button" data-action="edit-text" title="Edit the text on exactly one selected, unlocked native drawing"><i class="fa-solid fa-pen-to-square"></i> Edit Text</button>
           <button type="button" data-action="apply-selected" title="Only for multiple selections: apply the chosen style to unlocked Drawings"><i class="fa-solid fa-paintbrush"></i> Apply to All Selected</button>
-          <button type="button" data-action="undo-style" title="Restore previous selected drawing styles"><i class="fa-solid fa-rotate-left"></i> Revert Style</button>
+          <button type="button" data-action="undo-style" title="Undo the most recent Quickbar appearance change only; not movement, text edits or deletion"><i class="fa-solid fa-rotate-left"></i> Undo Style Change</button>
         </div>
         <details class="dqb-locked">
           <summary>Locked Drawings (<span data-value="locked-count">0</span>)</summary>
@@ -235,7 +257,7 @@ function createDock() {
       </div>
       <label class="dqb-option"><input name="autoStyle" type="checkbox"> Apply my default style to new Drawings</label>
 
-      <div class="dqb-help">New shapes become selected for immediate resizing. Presets and controls edit one selected Drawing instantly; multiple selections require Apply to All Selected. Edit Text adds a label to any unlocked shape. Locked gridlines stay protected.</div>
+      <div class="dqb-help">Deselect clears selection only. Delete asks before removing one unlocked Drawing. Arrow ends controls new arrows. Undo Style Change only reverts appearance.</div>
     </div>`;
   document.body.append(root);
   const left = preferences.position?.left ?? 112;
@@ -251,7 +273,7 @@ function createDock() {
       const mode = styleTargetMode(selectedDrawingObjects().map(item => item.document));
       if (mode.mode === "single") {
         editingStyle = normalizePrefs({...activeStyle(), ...PRESETS[button.dataset.preset]});
-        queueDirectStylePatch(stylePatch(editingStyle));
+        queueDirectStylePatch(visibleArrowStylePatch(selectedDrawingObjects()[0]?.document, editingStyle));
       } else {
         preferences = normalizePrefs({...preferences, ...PRESETS[button.dataset.preset]});
         safeSave();
@@ -260,9 +282,11 @@ function createDock() {
     }
     if (button.dataset.action === "close") closeDock();
     if (button.dataset.action === "deselect-one") {
+      // Deselect only changes local selection; it never changes Scene data.
       canvas?.drawings?.get(button.dataset.drawingId)?.release();
       refreshSelectedPanel();
     }
+    if (button.dataset.action === "delete-one") await deleteOneDrawing(button.dataset.drawingId);
     if (button.dataset.action === "unlock-one") await unlockDrawing(button.dataset.drawingId);
     if (button.dataset.action === "locate-one") await locateDrawing(button.dataset.drawingId);
     if (button.dataset.action === "finder-more") {
@@ -277,6 +301,13 @@ function createDock() {
     if (button.dataset.action === "edit-text") await editSelectedText();
     if (button.dataset.action === "apply-selected") await styleSelected();
     if (button.dataset.action === "undo-style") await undoSelectedStyle();
+  });
+  root.addEventListener("change", event => {
+    const field = event.target;
+    if (!(field instanceof HTMLSelectElement) || field.name !== "arrowEnds") return;
+    preferences = normalizePrefs({...preferences, arrowEnds: field.value});
+    safeSave();
+    renderStyleInputs();
   });
   root.addEventListener("input", event => {
     const input = event.target;
@@ -298,7 +329,8 @@ function createDock() {
       if (input.name === "fillColor" || input.name === "fillAlpha") draft.filled = true;
       if (mode.mode === "single") {
         editingStyle = normalizePrefs(draft);
-        queueDirectStylePatch(singleStylePatch(input.name, editingStyle));
+        queueDirectStylePatch(visibleArrowStylePatch(selectedDrawingObjects()[0]?.document,
+          editingStyle, input.name));
       } else {
         preferences = normalizePrefs(draft);
         safeSave();
@@ -422,6 +454,7 @@ function makeActionButton(doc, action, title, label) {
   button.title = title + ": " + drawingLabel(doc).name;
   button.setAttribute("aria-label", button.title);
   button.textContent = label;
+  if (action === "delete-one") button.classList.add("dqb-delete");
   return button;
 }
 function makeObjectRow(document, action, title, finder = false) {
@@ -447,12 +480,16 @@ function makeObjectRow(document, action, title, finder = false) {
   if (action) {
     const buttonTitle = action === "select-only" ? "Select only this Drawing (clear other selections)" : title;
     const buttonText = action === "unlock-one" ? "Unlock" :
-      action === "select-only" ? "Select" : "Remove";
+      action === "select-only" ? "Select" : "Deselect";
     actions.append(makeActionButton(document, action, buttonTitle, buttonText));
   }
   if (finder && !document.locked) {
     actions.append(makeActionButton(document, "edit-one-text",
       textPreview ? "Edit Drawing text" : "Add a text label to this Drawing", "Text"));
+  }
+  if (!document.locked && (finder || action === "deselect-one")) {
+    actions.append(makeActionButton(document, "delete-one",
+      "Delete this native Drawing after confirmation; Undo Style cannot restore it", "Delete"));
   }
   row.append(summary, actions);
   return row;
@@ -772,7 +809,7 @@ async function styleSelected() {
   const backups = selected.map(snapshotStyle);
   try {
     const result = await scene.updateEmbeddedDocuments("Drawing",
-      selected.map(d => ({_id: d.id, ...stylePatch(preferences)})));
+      selected.map(d => ({_id: d.id, ...visibleArrowStylePatch(d, preferences)})));
     if (!result?.length) return notify("No Drawings were updated.");
     lastStyleUndo = {kind: "batch", sceneId: scene.id, documents: backups.filter(old => result.some(r => r.id === old._id))};
     updateDockInputs();
@@ -799,7 +836,7 @@ async function undoSelectedStyle() {
     editingDrawingId = null;
     editingStyle = null;
     updateDockInputs();
-    notify("Previous drawing styles restored.", "info");
+    notify("Last Quickbar style change undone. Other edits are unchanged.", "info");
   } catch (error) {
     console.error(`${MODULE_ID} | Style rollback failed`, error);
     notify("Could not restore the previous styles.", "error");
@@ -835,7 +872,8 @@ function scenePoint(event) {
 function drawArrowPreview(point) {
   const path = arrowOverlay?.querySelector("path");
   if (!path || !arrowStart) return;
-  const points = arrowPoints(arrowStart.screen, point, Math.max(14, preferences.strokeWidth * 5), preferences.strokeWidth);
+  const points = arrowPoints(arrowStart.screen, point,
+    Math.max(14, preferences.strokeWidth * 5), preferences.strokeWidth, preferences.arrowEnds);
   path.setAttribute("d", points ? points.map((p, i) => `${i ? "L" : "M"}${p.x.toFixed(1)},${p.y.toFixed(1)}`).join(" ") + " Z" : "");
   path.setAttribute("fill", preferences.strokeColor);
   path.setAttribute("stroke", "none");
@@ -1169,5 +1207,5 @@ Hooks.once("ready", () => {
     // A tool switch or Scene navigation should never leave an invisible input shield over the canvas.
     if (arrowOverlay && !arrowOverlay.contains(event.target) && !dock?.contains(event.target) && !canvas?.drawings?.active) exitArrow();
   });
-  console.info(`${MODULE_ID} | v0.1.7 ready (Foundry v14 native Drawing workflow)`);
+  console.info(`${MODULE_ID} | v0.1.8 ready (Foundry v14 native Drawing workflow)`);
 });
