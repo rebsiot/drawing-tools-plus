@@ -8,7 +8,7 @@ test("each published version has distinct, readable release notes", async () => 
     const text = await readFile(new URL("../docs/releases/" + version + ".md", import.meta.url), "utf8");
     assert.ok(text.includes(version));
     assert.ok(text.includes("**New:**") || text.includes("**Fixed:**") ||
-      text.includes("**Improved:**") || text.includes("## New") || text.includes("## Fixed"));
+      text.includes("**Improved:**") || text.includes("## New") || text.includes("## Fixed") || text.includes("## Improved"));
     assert.ok(!text.includes("No gameplay script changes from the v0.1.0 baseline"));
   }
   const workflow = await readFile(new URL("../.github/workflows/release.yml", import.meta.url), "utf8");
