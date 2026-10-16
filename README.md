@@ -1,8 +1,8 @@
-# Drawing Tools+ / Drawing Quickbar - v0.1.0 beta (2026-10-16)
+# Drawing Tools+ / Drawing Quickbar - v0.1.1 beta (2026-10-16)
 
 Project repository: https://github.com/rebsiot/drawing-tools-plus
 
-**Beta release:** https://github.com/rebsiot/drawing-tools-plus/releases/tag/v0.1.0
+**Beta release:** https://github.com/rebsiot/drawing-tools-plus/releases/tag/v0.1.1
 
 **Permanent Foundry install/update manifest:**
 `https://raw.githubusercontent.com/rebsiot/drawing-tools-plus/main/module.json`
@@ -11,20 +11,21 @@ Project repository: https://github.com/rebsiot/drawing-tools-plus
 
 A **system-independent Foundry VTT v14 beta** for making the existing **Drawings** layer less cumbersome. This is not a wall-building tool, nor does it replace Foundry's Drawing documents, native drawing editor, scene persistence, selection, or normal deletion.
 
-**Status: automated/mock-tested only. Not yet tested in a live Foundry client.** This is a test-world beta, not a confirmed public release.
+**Status:** A GM reports that the original v0.1.0 quickbar generally works on live Foundry v14, but Arrow fails with `DrawingDocument.shape.type: f is not a valid choice`. v0.1.1 addresses that failure and adds editing controls; those changes **still require live validation**. Use a test Scene first.
 
 ## What it adds
 
-- A new **Drawing Quickbar** button in Foundry's native **Drawings** tools palette (GM only in v0.1.0).
+- A new **Drawing Quickbar** button in Foundry's native **Drawings** tools palette (GM only in v0.1.1).
 - One-click access to native **Select, Freehand, Rectangle, Ellipse, Polygon, Text** tools.
-- **Arrow**: drag from tail to tip; saves one ordinary native freehand Drawing document. The arrow's coordinates/shape require live testing in v14.
+- **Arrow**: drag from tail to tip; saves a closed filled arrow silhouette as one native v14 polygon Drawing. Corrects the rejected legacy `f` shape type; visual geometry, resizing and undo still require v14 live verification.
 - **Four style presets** (Outline, Danger, Highlight, Filled), plus stroke/fill/text colors, stroke width, fill opacity, and text size.
 - Client-only remembered style choices and movable panel position.
 - Optional **Use this style for new drawings** while the Quickbar remains open. Styles are applied via the documented `preCreateDrawing` hook, without altering existing drawings.
+- **Duplicate** creates offset copies of the selected, unlocked native Drawings without changing their originals, IDs or linked data. **Edit Text** opens Foundry v14's built-in inline text editor for exactly one selected, unlocked Drawing.
 - **Style Selected** applies the chosen style to selected, unlocked native Drawing documents; **Revert Style** reverses the last such batch made by this module during the current scene session.
 - Shortcuts while the Quickbar is open and the Drawings layer is active (but not while typing): `V` Select, `F` Freehand, `R` Rectangle, `E` Ellipse, `P` Polygon, `T` Text, `A` Arrow. `Esc` exits Arrow mode.
 
-Selection, moving, resizing, native Drawing configuration, Ctrl+Z, and shape creation outside Arrow mode remain owned by Foundry. `Revert Style` is a separate one-step safeguard for this module's batch restyling; it does not replace Foundry's undo history.
+Selection, moving, resizing, native Drawing configuration, and shape creation outside Arrow mode remain owned by Foundry. Duplicate and Arrow register native undo history when the current v14 build supports it. `Revert Style` is a separate one-step safeguard for this module's batch restyling; it does not replace Foundry's undo history.
 
 ## Prerequisites
 
@@ -50,8 +51,9 @@ Selection, moving, resizing, native Drawing configuration, Ctrl+Z, and shape cre
 
 1. On a **test Scene**, open the Quickbar and click **Box**. Choose **Danger**; draw a rectangle. Verify that it saves as an ordinary, red native Drawing and can be selected, moved, and resized.
 2. Select that box and choose **Highlight > Style Selected > Revert Style**. Verify the original appearance returns. (If the box is the first new drawing in the chosen Danger style, the rollback should restore Danger.)
-3. Click **Arrow**, drag a line on the map and release. Verify it appears, can be selected/moved as **one** Drawing, and remains after refreshing the browser. Test Ctrl+Z once when the Arrow is the most recently created drawing.
-4. Make sure existing Drawings, Walls, Tiles and tokens still behave normally. Check the browser console for errors.
+3. Click **Arrow**, drag a line on the map and release. Verify it appears as one solid polygon arrow, can be selected/moved and persists after reload. Test Arrow at two zoom levels and undo once.
+4. Select a test rectangle and choose **Duplicate**. Check that one offset copy appears and the original remains unchanged. Select only the copy, then choose **Edit Text**; verify Foundry's inline editor opens and the entered text persists.
+5. Make sure existing Drawings, Walls, Tiles and tokens still behave normally. Check the browser console for errors.
 
 If step 1 fails, **stop testing and report the Foundry v14 build number and first console error**. Do not test on important world Scenes until a basic creation check passes.
 
@@ -60,7 +62,8 @@ If step 1 fails, **stop testing and report the Foundry v14 build number and firs
 - **New-drawing styles:** The native shape preview may temporarily use Foundry's existing drawing defaults until the new Drawing is committed. This beta applies Quickbar styles on creation, not by replacing the internal preview renderer.
 - **Existing drawings:** Select them with Foundry's native Select tool, then click **Style Selected**. It changes only style fields; geometry, ownership, IDs, positions, existing flags, and attached data are untouched.
 - **Revert Style:** One batch, current scene, current browser session. It cannot restore deleted drawings or undo unrelated changes.
-- **Arrow:** The custom pointer overlay is active only while Arrow is chosen; right-click or press Esc to exit. It writes a normal native Drawing with a small namespaced `kind: arrow` flag. Arrows do not modify Foundry Walls or Regions.
+- **Arrow:** The custom pointer overlay is active only while Arrow is chosen; right-click or press Esc to exit. It writes one native polygon Drawing with a namespaced `kind: arrow` flag. Arrows do not modify Foundry Walls or Regions.
+- **Selection safety:** Duplicate, Edit Text and Style Selected deliberately skip locked Drawings. Your existing painted gridlines are not automatically tagged or locked. To safeguard them today, manually lock them using Foundry's native Drawing/Placeables controls. A Quickbar selected-object list and protected background/working groups are planned, not part of v0.1.1.
 - **Preferences:** Per-browser Foundry client setting (`foundry-drawing-quickbar.preferences`); no world-level configuration or migrations.
 
 ## Rollback
@@ -69,14 +72,14 @@ If step 1 fails, **stop testing and report the Foundry v14 build number and firs
 2. To remove the module's files, stop Foundry and delete only `Z:\Data\modules\foundry-drawing-quickbar`, then restart.
 3. If a test modified important world data unexpectedly, restore the **matching world snapshot**, not merely the module directory. Rollback of a module folder cannot undo world data edits.
 
-## Known limits / non-goals in v0.1.0
+## Known limits / non-goals in v0.1.1
 
 - No changes to wall editing, elevation/levels, or native Foundry Drawing geometry handlers.
 - GM-only Quickbar launch. Players' standard Foundry drawing permissions are not changed.
 - Keyboard shortcuts are active only with the panel open and the Drawings layer selected.
-- The Arrow tool is experimental pending a real v14 test: canvas-to-Scene coordinate conversion, arrowhead sizing under zoom, and Drawing geometry validity are unverified live.
+- The Arrow's invalid `f` type was reported live on v0.1.0. It now uses a native `p` polygon silhouette; pan/zoom geometry, text editor activation, copy selection and Arrow undo remain unverified live.
 - Styling of preexisting Drawings is deliberately manual. It does not bulk migrate any world or Scene data.
-- Not yet a full Excalidraw-style editor: no multi-object alignment, text editing in place, snapping enhancements, or generalized history panel.
+- Not yet a full Excalidraw-style editor: no selection inspector, protected background/working groups, alignment, snapping enhancements, custom handles or generalized history panel. Inline text editing uses Foundry's native editor.
 - Source is maintained at https://github.com/rebsiot/drawing-tools-plus, with beta release ZIPs and an install/update manifest. This **GitHub beta is not listed in Foundry's official package directory**.
 - Software is distributed under the [Personal Use Only (No Redistribution)](LICENSE.md) source-available proprietary license. Public GitHub visibility does not authorize redistribution.
 

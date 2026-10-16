@@ -1,8 +1,22 @@
-# Test Report — Drawing Quickbar v0.1.0
+# Test Report — Drawing Quickbar v0.1.1
 
 **Date:** 2026-10-16
 
-## Automated / mock-tested: PASS
+## v0.1.1 beta (2026-10-16) — test evidence
+
+**Reported live in v0.1.0:** Most controls appear functional, but creating Arrow throws `shape.type: f is not a valid choice`. This user report supersedes the previous "not tested at all" language for the v0.1.0 runtime only.
+
+**Implemented / awaiting v14 live verification in v0.1.1:**
+- Arrow uses a native polygon `p` silhouette with a closed shaft/head, avoiding invalid legacy `f`.
+- Duplicate selected unlocked Drawings via native Scene creation, retaining original Drawing documents.
+- Edit Text invokes the documented native Drawing `enableTextEditing()` method.
+- Unit tests cover polygon arrow shape, invalid/short arrows, native copy data, locked exclusion and release manifest.
+- UI integration, panned/zoomed arrow geometry, native text interaction, undo, and gridline safety **still require a real Foundry v14 smoke test**.
+- Selected Objects inspector, protective groups, and Quickbar locking controls: **planned, not implemented**.
+
+**Recommended next live test:** Use the current GitHub beta in an expendable Scene. Create an Arrow, duplicate one unlocked test Drawing, and edit text; verify persistence and check console. Do not experiment on valuable gridline Drawings until a matching world backup exists.
+
+## Original v0.1.0 automated / mock-tested: PASS
 
 - `node --check scripts/main.js` — syntax pass.
 - `node --check scripts/model.js` — syntax pass.

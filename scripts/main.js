@@ -1,6 +1,6 @@
 import {
   MODULE_ID, DEFAULT_PREFS, PRESETS, normalizePrefs, stylePatch,
-  snapshotStyle, arrowPoints, arrowDocumentData, shouldStyleNewDrawing
+  snapshotStyle, arrowPoints, arrowDocumentData, duplicateDrawingData, shouldStyleNewDrawing
 } from "./model.js";
 
 const TOOLS = new Set(["select", "rect", "ellipse", "polygon", "freehand", "text"]);
@@ -85,7 +85,7 @@ function createDock() {
   root.setAttribute("aria-label", "Drawing Quickbar");
   root.innerHTML = `
     <div class="dqb-header">
-      <span><i class="fa-solid fa-pen-ruler" aria-hidden="true"></i> Drawing Quickbar <small>v0.1.0</small></span>
+      <span><i class="fa-solid fa-pen-ruler" aria-hidden="true"></i> Drawing Quickbar <small>v0.1.1</small></span>
       <button type="button" class="dqb-icon" data-action="close" aria-label="Close Drawing Quickbar" title="Close"><i class="fa-solid fa-xmark"></i></button>
     </div>
     <div class="dqb-content">
@@ -116,6 +116,8 @@ function createDock() {
       </div>
       <label class="dqb-option"><input name="autoStyle" type="checkbox"> Use this style for new drawings while Quickbar is open</label>
       <div class="dqb-actions">
+        <button type="button" data-action="duplicate-selected" title="Duplicate selected, unlocked native drawings, offset 24 pixels"><i class="fa-solid fa-copy"></i> Duplicate</button>
+        <button type="button" data-action="edit-text" title="Edit the text on exactly one selected, unlocked native drawing"><i class="fa-solid fa-pen-to-square"></i> Edit Text</button>
         <button type="button" data-action="apply-selected" title="Apply style to selected existing drawings"><i class="fa-solid fa-paintbrush"></i> Style Selected</button>
         <button type="button" data-action="undo-style" title="Restore previous selected drawing styles"><i class="fa-solid fa-rotate-left"></i> Revert Style</button>
       </div>
@@ -137,6 +139,8 @@ function createDock() {
       safeSave();
     }
     if (button.dataset.action === "close") closeDock();
+    if (button.dataset.action === "duplicate-selected") await duplicateSelected();
+    if (button.dataset.action === "edit-text") editSelectedText();
     if (button.dataset.action === "apply-selected") await styleSelected();
     if (button.dataset.action === "undo-style") await undoSelectedStyle();
   });
@@ -188,6 +192,59 @@ async function selectTool(tool) {
     notify("The native drawing tool could not be selected.", "error");
   }
   refreshToolHighlight();
+}
+
+/**
+ * Native drawing selection is the authoritative target set. No global select-all,
+ * automatic deletion, or edits to locked drawings are performed here.
+ */
+function selectedEditableObjects() {
+  return [...(canvas?.drawings?.controlled ?? [])]
+    .filter(object => object?.document?.id && !object.document.locked);
+}
+
+async function duplicateSelected() {
+  if (!isUsable() || !canvas.drawings.active) return notify("Open the Drawings layer and select your drawings first.");
+  const sources = selectedEditableObjects();
+  if (!sources.length) return notify("Select one or more unlocked drawings to duplicate.");
+  const data = sources.map(object => duplicateDrawingData(object.document)).filter(Boolean);
+  if (!data.length) return notify("No eligible drawings could be duplicated.");
+  const scene = canvas.scene;
+  try {
+    const created = await scene.createEmbeddedDocuments("Drawing", data);
+    if (!created?.length) return notify("No drawings were duplicated.");
+    try { canvas.drawings.storeHistory("create", created.map(d => d.toObject())); }
+    catch (error) { console.debug(`${MODULE_ID} | Native duplicate undo registration unavailable`, error); }
+    // Use Foundry's native selection so users can immediately move the duplicates.
+    try {
+      canvas.drawings.releaseAll();
+      for (const item of created) canvas.drawings.get(item.id)?.control({releaseOthers: false});
+    } catch (error) {
+      console.debug(`${MODULE_ID} | Could not select duplicate drawings`, error);
+    }
+    notify(`Duplicated ${created.length} drawing${created.length === 1 ? "" : "s"}.`, "info");
+  } catch (error) {
+    console.error(`${MODULE_ID} | Duplicate drawings failed`, error);
+    notify("Could not duplicate the selected drawings. See console.", "error");
+  }
+}
+
+function editSelectedText() {
+  if (!isUsable() || !canvas.drawings.active) return notify("Open the Drawings layer and select one drawing.");
+  const sources = selectedEditableObjects();
+  const totalSelected = canvas.drawings.controlled?.length ?? 0;
+  if (totalSelected !== 1 || sources.length !== 1) {
+    return notify("Select exactly one unlocked drawing to edit its text.");
+  }
+  const placeable = sources[0];
+  if (typeof placeable.enableTextEditing !== "function") {
+    return notify("This Foundry build does not expose the native inline text editor.", "error");
+  }
+  try { placeable.enableTextEditing(); }
+  catch (error) {
+    console.error(`${MODULE_ID} | Inline text editing failed`, error);
+    notify("Could not open the native inline text editor. See console.", "error");
+  }
 }
 
 async function styleSelected() {
@@ -254,10 +311,10 @@ function scenePoint(event) {
 function drawArrowPreview(point) {
   const path = arrowOverlay?.querySelector("path");
   if (!path || !arrowStart) return;
-  const points = arrowPoints(arrowStart.screen, point, 20);
-  path.setAttribute("d", points ? points.map((p, i) => `${i ? "L" : "M"}${p.x.toFixed(1)},${p.y.toFixed(1)}`).join(" ") : "");
-  path.setAttribute("stroke", preferences.strokeColor);
-  path.setAttribute("stroke-width", String(preferences.strokeWidth));
+  const points = arrowPoints(arrowStart.screen, point, Math.max(14, preferences.strokeWidth * 5), preferences.strokeWidth);
+  path.setAttribute("d", points ? points.map((p, i) => `${i ? "L" : "M"}${p.x.toFixed(1)},${p.y.toFixed(1)}`).join(" ") + " Z" : "");
+  path.setAttribute("fill", preferences.strokeColor);
+  path.setAttribute("stroke", "none");
 }
 function resetArrowPointer() {
   arrowStart = null;
@@ -379,5 +436,5 @@ Hooks.once("ready", () => {
     // A tool switch or Scene navigation should never leave an invisible input shield over the canvas.
     if (arrowOverlay && !arrowOverlay.contains(event.target) && !dock?.contains(event.target) && !canvas?.drawings?.active) exitArrow();
   });
-  console.info(`${MODULE_ID} | v0.1.0 ready (Foundry v14 native Drawing workflow)`);
+  console.info(`${MODULE_ID} | v0.1.1 ready (Foundry v14 native Drawing workflow)`);
 });

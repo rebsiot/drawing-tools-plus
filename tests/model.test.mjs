@@ -2,7 +2,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import {
   MODULE_ID, DEFAULT_PREFS, normalizePrefs, stylePatch,
-  arrowPoints, arrowDocumentData, snapshotStyle, shouldStyleNewDrawing, PRESETS
+  arrowPoints, arrowDocumentData, duplicateDrawingData, snapshotStyle, shouldStyleNewDrawing, PRESETS
 } from '../scripts/model.js';
 
 test('module has a stable independent identifier', () => {
@@ -42,25 +42,64 @@ test('one-step backup captures style fields only', () => {
   const snapshot = snapshotStyle({id: 'a', toObject: () => before});
   assert.deepEqual(snapshot, {_id:'a', strokeColor:'#fefefe', strokeWidth: 5, fillType:1});
 });
-test('arrow endpoints are part of the same native shape path', () => {
-  const p = arrowPoints({x:0, y:0}, {x:100, y:0}, 20);
-  assert.equal(p.length, 5);
-  assert.deepEqual(p[0], {x:0, y:0});
-  assert.deepEqual(p[1], p[3]);
-  assert.ok(p[2].x < 100 && p[4].x < 100);
+test('arrow creates a closed, filled seven-vertex arrowhead and shaft', () => {
+  const p = arrowPoints({x:0, y:0}, {x:100, y:0}, 20, 4);
+  assert.equal(p.length, 7);
+  assert.equal(p[0].x, 0);
+  assert.deepEqual(p[3], {x:100, y:0});
+  assert.equal(p[6].x, 0);
+  assert.ok(p[2].y > p[1].y && p[4].y < p[5].y);
 });
-test('arrow writes exactly one native freehand drawing with no paid art or scene changes', () => {
+test('arrow uses valid native v14 polygon shape type with no paid art or scene changes', () => {
   const d = arrowDocumentData({x:220,y:200}, {x:120,y:90}, DEFAULT_PREFS);
-  assert.equal(d.shape.type, 'f');
-  assert.equal(d.shape.points.length, 10);
+  assert.equal(d.shape.type, 'p');
+  assert.equal(d.shape.points.length, 14);
   assert.ok(d.shape.width > 0 && d.shape.height > 0);
   assert.ok(d.x <= 120 && d.y <= 90);
-  assert.equal(d.fillType, 0);
+  assert.equal(d.fillType, 1);
+  assert.equal(d.fillColor, DEFAULT_PREFS.strokeColor);
+  assert.equal(d.strokeWidth, 0);
   assert.equal(d.flags[MODULE_ID].kind, 'arrow');
   assert.equal('scene' in d, false);
 });
 test('degenerate arrow is ignored', () => {
   assert.equal(arrowDocumentData({x:1,y:1}, {x:1,y:1}, DEFAULT_PREFS), null);
+});
+test('duplicate native drawing data preserves style, flags, text and geometry without copying identity', () => {
+  const original = {
+    _id: 'drawing-1', author: 'gm', name: 'Grid note', x: 100, y: 200,
+    shape: {type: 'p', width: 80, height: 50, points: [0, 0, 80, 50]},
+    strokeColor: '#aabbcc', text: 'Hello', locked: false,
+    flags: {[MODULE_ID]: {kind: 'arrow'}}
+  };
+  const duplicate = duplicateDrawingData({locked:false, toObject: () => structuredClone(original)});
+  assert.equal(duplicate.name, 'Grid note (Copy)');
+  assert.equal(duplicate.x, 124);
+  assert.equal(duplicate.y, 224);
+  assert.equal(duplicate.text, 'Hello');
+  assert.deepEqual(duplicate.flags, original.flags);
+  assert.deepEqual(duplicate.shape, original.shape);
+  assert.equal('_id' in duplicate, false);
+  assert.equal('author' in duplicate, false);
+  assert.equal(original.x, 100);
+  assert.equal(original.y, 200);
+});
+test('locked drawings are never duplicated by the module', () => {
+  const document = {locked: true, toObject: () => ({locked:true, x:0, y:0})};
+  assert.equal(duplicateDrawingData(document), null);
+});
+test('arrow geometry works in each direction and refuses degenerate coordinates', () => {
+  for (const [start, end] of [
+    [{x:0,y:0},{x:100,y:0}],
+    [{x:0,y:0},{x:0,y:-100}],
+    [{x:80,y:30},{x:-20,y:190}]
+  ]) {
+    const arrow = arrowDocumentData(start,end,DEFAULT_PREFS);
+    assert.ok(arrow.shape.points.every(Number.isFinite));
+    assert.ok(arrow.shape.width > 0 && arrow.shape.height > 0);
+    assert.equal(arrow.shape.type, 'p');
+  }
+  assert.equal(arrowDocumentData({x:0,y:0},{x:0.3,y:0.1},DEFAULT_PREFS), null);
 });
 test('style application is explicitly limited to local, new native drawing creations', () => {
   const base = {open: true, active: true, autoStyle: true, userId:'gm', currentUserId:'gm', existingId:null, sceneId:'scene-1', parentId:'scene-1', tool:'rect'};

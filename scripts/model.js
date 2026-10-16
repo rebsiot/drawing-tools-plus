@@ -70,39 +70,73 @@ export function snapshotStyle(document) {
   return snapshot;
 }
 
-/** Screen or scene coordinate geometry for a single native freehand arrow. */
-export function arrowPoints(start, end, head = 18) {
+/**
+ * Build a closed, filled arrow silhouette from 7 vertices. In v14 freehand "f"
+ * is not a valid Drawing shape type; a native polygon ("p") is supported.
+ * A filled silhouette avoids the unintended closing diagonal of an open stroke.
+ */
+export function arrowPoints(start, end, head = 18, shaftWidth = 4) {
   const dx = end.x - start.x;
   const dy = end.y - start.y;
   const distance = Math.hypot(dx, dy);
-  if (!Number.isFinite(distance) || distance < 1) return null;
-  const length = Math.min(head, distance * 0.48);
-  const angle = Math.atan2(dy, dx);
-  const wing = Math.PI / 6;
+  if (!Number.isFinite(distance) || distance < 2 || !Number.isFinite(head) || !Number.isFinite(shaftWidth)) return null;
+  const ux = dx / distance, uy = dy / distance;
+  const px = -uy, py = ux;
+  const length = Math.min(Math.max(2, head), distance * 0.45);
+  const halfShaft = Math.min(Math.max(0.5, shaftWidth / 2), length * 0.28);
+  const halfHead = Math.min(Math.max(halfShaft * 2.4, length * 0.48), distance * 0.3);
+  const base = {x: end.x - ux * length, y: end.y - uy * length};
+  const point = (anchor, side) => ({x: anchor.x + px * side, y: anchor.y + py * side});
   return [
-    {x: start.x, y: start.y}, {x: end.x, y: end.y},
-    {x: end.x - length * Math.cos(angle - wing), y: end.y - length * Math.sin(angle - wing)},
+    point(start, halfShaft),
+    point(base, halfShaft),
+    point(base, halfHead),
     {x: end.x, y: end.y},
-    {x: end.x - length * Math.cos(angle + wing), y: end.y - length * Math.sin(angle + wing)}
+    point(base, -halfHead),
+    point(base, -halfShaft),
+    point(start, -halfShaft)
   ];
 }
 
 export function arrowDocumentData(start, end, prefs) {
   const p = normalizePrefs(prefs);
-  const points = arrowPoints(start, end, Math.max(14, p.strokeWidth * 5));
+  const points = arrowPoints(start, end, Math.max(14, p.strokeWidth * 5), p.strokeWidth);
   if (!points) return null;
   const xs = points.map(point => point.x);
   const ys = points.map(point => point.y);
   const x = Math.min(...xs), y = Math.min(...ys);
   const width = Math.max(1, Math.max(...xs) - x);
   const height = Math.max(1, Math.max(...ys) - y);
-  const flat = points.flatMap(point => [Number((point.x - x).toFixed(2)), Number((point.y - y).toFixed(2))]);
+  const flat = points.flatMap(point => [
+    Number((point.x - x).toFixed(2)), Number((point.y - y).toFixed(2))
+  ]);
   return {
     name: "Arrow",
     x, y,
-    shape: {type: "f", width, height, points: flat},
+    shape: {type: "p", width, height, points: flat},
     ...stylePatch({...p, filled: false}),
+    fillType: 1,
+    fillColor: p.strokeColor,
+    fillAlpha: p.strokeAlpha,
+    strokeWidth: 0,
+    strokeAlpha: 0,
     flags: {[MODULE_ID]: {kind: "arrow", version: 1}}
+  };
+}
+
+/** Duplicate only a selected, unlocked native Drawing; preserve flags, geometry, and styles. */
+export function duplicateDrawingData(document, offset = 24) {
+  if (!document || document.locked) return null;
+  const raw = document.toObject();
+  if (!raw || raw.locked || !Number.isFinite(raw.x) || !Number.isFinite(raw.y)) return null;
+  if (!Number.isFinite(offset) || offset < 0 || offset > 200) return null;
+  const {_id, id, author, _stats, ...copy} = raw;
+  const sourceName = typeof raw.name === "string" && raw.name.trim() ? raw.name.trim() : "Drawing";
+  return {
+    ...copy,
+    name: `${sourceName.slice(0, 110)} (Copy)`,
+    x: raw.x + offset,
+    y: raw.y + offset
   };
 }
 

@@ -14,6 +14,23 @@ The source currently implements a compact, movable Drawing Quickbar layered onto
 
 The current module has native selection/freehand/rectangle/ellipse/polygon/text tool switching, Arrow creation as one native freehand Drawing, Outline/Danger/Highlight/Filled presets, color and size controls, optional style-on-create, batch Style Selected and one-step Revert Style, client-side preferences and shortcuts. GM-only toolbar. It does not offer inline text editing, multi-select grouping, smart arrow connectors, alignment, or generalized undo/redo.
 
+## 16.1 update — v0.1.1 and new selection-protection TODO (2026-10-16)
+
+**Live v0.1.0 report:** GM reports most Drawing Quickbar functions working in live Foundry v14, but Arrow failed on creation with `DataModelValidationFailure [DrawingDocument]: shape.type: f is not a valid choice`. No exact Foundry build number reported. Existing painted gridlines are valuable Scene Drawings to protect.
+
+**v0.1.1 beta work:** Use a v14 `p` polygon for Arrow rather than invalid `f`, use a closed silhouette so the shape doesn't create a return stroke; add Duplicate of selected unlocked Drawing documents and native `Drawing.enableTextEditing()` for exactly one unlocked Drawing. All changes are to native Drawings. Existing module ID/settings/flags preserved. No auto-migration. **This new code is not live validated yet.**
+
+**Requested TODO (priority before deeper manipulation): Drawing Selection & Protection**
+1. Show **Selected Objects** inside the Quickbar: exact count, name/type/lock state for each selected native Drawing, with individual deselect controls. Clearly distinguish locked background markings so no accidental selection/deletion.
+2. **Protect Drawings:** user-selected gridline/annotation Drawings can be explicitly locked with the native `DrawingDocument.locked` field; offer discoverable unlock/recovery via a list that includes locked objects. Protect from Quickbar bulk edits/delete. No automatic locking of preexisting Drawings.
+3. **Background versus Working groups:** a logical grouping/filtering mechanism using native Drawing flags and Foundry's placeables UI; no new renderer or replacement for the real Drawings layer. Explore separation after locking and inspector UX are verified.
+4. **Safe deletion:** if the module later adds bulk delete, list the exact targets and request confirmation; leave Foundry's native deletion unchanged until proper guards exist.
+5. Safety regression: on Scene with hand-drawn gridlines, explicitly protect them, select several working Drawings, duplicate/style/delete test copies, and verify untouched IDs, geometry and persistence of gridlines.
+
+**Implementation status:** Items 1–5 above are **planned**, not implemented by v0.1.1. Native locking already exists in v14 and can be used manually in the meantime.
+
+**Release sequencing:** GitHub prerelease `v0.1.1` must be built and verified before moving the stable `main/module.json` manifest. Validate Arrow/duplicate/inline editor in a test world, then tackle the Selected Objects inspector/locking UX.
+
 ## Source of truth and GitHub release boundaries
 
 - Use the actual GitHub source at `rebsiot/drawing-tools-plus` (default branch `main`) and/or the newest verified working ZIP. Handoff notes describe intent but are not code.
