@@ -18,7 +18,7 @@ test("all-Drawings finder exposes local Locate, Select, Edit and locked recovery
 test("Edit Text uses a focused, native document update, never a replacement Drawing", async () => {
   const src = await readFile(new URL("../scripts/main.js", import.meta.url), "utf8");
   assert.match(src, /beginEditDrawingText\(sources\[0\]\.document\.id\)/);
-  assert.match(src, /textScene = \{sceneId: canvas\.scene\.id, drawingId: doc\.id\}/);
+  assert.match(src, /textScene = \{sceneId, drawingId: doc\.id\}/);
   assert.match(src, /editTextPatch\(existing, raw, newPreferences\)/);
   assert.match(src, /canvas\.scene\.updateEmbeddedDocuments\("Drawing", \[patch\]\)/);
   assert.match(src, /popup\.elements\.namedItem\("drawingText"\)\.value = original\?\.text/);
