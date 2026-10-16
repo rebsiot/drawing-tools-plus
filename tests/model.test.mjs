@@ -340,7 +340,7 @@ test('all arrow placements accept each head shape while preserving one native Dr
         assert.ok(doc.shape.width>0&&doc.shape.height>0);
         assert.equal(doc.flags[MODULE_ID].ends,ends);
         assert.equal(doc.flags[MODULE_ID].headShape,shape);
-        assert.equal(doc.flags[MODULE_ID].version,3);
+        assert.equal(doc.flags[MODULE_ID].version,shape==="chevron"?4:3);
         assert.equal(doc.strokeWidth,0);
         assert.equal(doc.fillType,1);
         assert.ok(doc.fillAlpha>=.3);
@@ -358,6 +358,15 @@ test('all arrow placements accept each head shape while preserving one native Dr
   assert.notDeepEqual(triangle,diamond);
   assert.notDeepEqual(triangle,chevron);
   assert.equal(arrowPoints(start,end,22,5,'none','chevron').length,4);
+  assert.ok(chevron[4].x < chevron[3].x && chevron[4].x < chevron[5].x,
+    "Chevron tip includes a clear inward V-notch rather than a filled triangle");
+  for(const ends of ['start','both']){
+    const fork=arrowDocumentData(start,end,{...DEFAULT_PREFS,arrowEnds:ends,arrowHeadShape:'chevron'});
+    assert.equal(fork.shape.type,'p');
+    assert.equal(fork.fillType,1);
+    assert.equal(fork.strokeWidth,0);
+    assert.ok(fork.shape.points.length >= 18);
+  }
   assert.deepEqual(
     arrowPoints(start,end,22,5,'end','not-a-shape'),
     triangle,'unknown arrow shapes safely become triangle'

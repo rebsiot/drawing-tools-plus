@@ -23,14 +23,20 @@ test("Quickbar Text workflow uses focused modal and native embedded Drawing crea
   assert.match(src, /popup\.addEventListener\("keydown"/);
 });
 
-test("six compact primary drawing tools occupy one row and Arrow is below",async()=>{
+test("six primary tools stay on row one; Line/Arrow/Route/Callout share row two",async()=>{
   const src=await readFile(new URL("../scripts/main.js",import.meta.url),"utf8");
   const css=await readFile(new URL("../styles/quickbar.css",import.meta.url),"utf8");
   const start=src.indexOf('<div class="dqb-tools"'),end=src.indexOf('</div>',start);
   assert.ok(start>0&&end>start);
   const firstRow=[...src.slice(start,end).matchAll(/data-tool="([^"]+)"/g)].map(m=>m[1]);
   assert.deepEqual(firstRow,['select','freehand','rect','ellipse','polygon','text']);
-  assert.ok(src.indexOf('<div class="dqb-arrow-tool">',end)>end);
+  const row2Start=src.indexOf('<div class="dqb-annotation-tools"',end);
+  const row2End=src.indexOf('</div>',row2Start);
+  assert.ok(row2Start>end && row2End>row2Start);
+  const secondRow=[...src.slice(row2Start,row2End).matchAll(/data-tool="([^"]+)"/g)]
+    .map(match=>match[1]);
+  assert.deepEqual(secondRow,['line','arrow','route','callout']);
+  assert.match(css,/\.dqb-annotation-tools \{\s*display: grid;\s*grid-template-columns: repeat\(4, minmax\(0, 1fr\)\)/);
   assert.match(css,/\.dqb-tools \{\s*grid-template-columns: repeat\(6, minmax\(0, 1fr\)\)/);
   assert.match(css,/\.dqb-fields \{\s*row-gap: 5px/);
   assert.match(css,/\.dqb-wide input\[type="range"\] \{\s*height: 14px; margin: 0/);
