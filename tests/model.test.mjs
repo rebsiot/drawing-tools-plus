@@ -5,7 +5,7 @@ import {
   arrowPoints, arrowDocumentData, duplicateDrawingData, textDocumentData, drawingLabel,
   drawingCenter, editTextPatch, findSceneDrawings,
   stylePreferencesFromDrawing, singleStylePatch, styleTargetMode,
-  visibleArrowStylePatch, isQuickbarArrow,
+  visibleArrowStylePatch, isQuickbarArrow, penStylePatch, drawingAppearancePatch,
   shouldRunDrawingShortcut, snapshotStyle, shouldStyleNewDrawing, PRESETS
 } from '../scripts/model.js';
 
@@ -362,4 +362,39 @@ test('all arrow placements accept each head shape while preserving one native Dr
     arrowPoints(start,end,22,5,'end','not-a-shape'),
     triangle,'unknown arrow shapes safely become triangle'
   );
+});
+
+test('Pen is an unfilled native freehand path, even with a Filled preset', () => {
+  const prefs={...DEFAULT_PREFS,filled:true,fillAlpha:.9,strokeColor:'#ff0000',strokeWidth:7};
+  const fresh=penStylePatch(prefs);
+  assert.equal(fresh.fillType,0);
+  assert.equal(fresh.fillAlpha,0);
+  assert.equal(fresh.strokeColor,'#ff0000');
+  assert.equal(fresh.strokeWidth,7);
+  assert.ok(fresh.strokeAlpha>.0);
+  assert.ok(!('shape' in fresh) && !('_id' in fresh));
+  const drawing={id:'pen-1',shape:{type:'f',width:98,height:33,points:[0,0,42,8,98,33]}};
+  const original=structuredClone(drawing);
+  const preset=drawingAppearancePatch(drawing,prefs);
+  assert.equal(preset.fillType,0);
+  assert.equal(preset.fillAlpha,0);
+  assert.deepEqual(drawingAppearancePatch(drawing,prefs,'filled'),null);
+  assert.deepEqual(drawingAppearancePatch(drawing,prefs,'fillColor'),null);
+  assert.deepEqual(drawingAppearancePatch(drawing,prefs,'fillAlpha'),null);
+  const color=drawingAppearancePatch(drawing,prefs,'strokeColor');
+  assert.equal(color.strokeColor,'#ff0000');
+  assert.equal(color.fillType,0);
+  assert.ok(!('shape' in color));
+  assert.deepEqual(drawing,original);
+});
+test('Freehand protection does not change rectangles or native Arrow behavior', () => {
+  const prefs={...DEFAULT_PREFS,filled:true,fillAlpha:.4};
+  const box={shape:{type:'r'}};
+  const boxStyle=drawingAppearancePatch(box,prefs);
+  assert.equal(boxStyle.fillType,1);
+  const arrow=arrowDocumentData({x:0,y:0},{x:120,y:12},DEFAULT_PREFS);
+  const arrowStyle=drawingAppearancePatch(arrow,prefs);
+  assert.equal(arrowStyle.fillType,1);
+  assert.ok(arrowStyle.fillAlpha>=.3);
+  assert.equal(arrowStyle.strokeWidth,0);
 });

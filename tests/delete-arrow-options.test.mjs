@@ -27,8 +27,8 @@ test('arrow end options use same preview geometry as one saved native polygon', 
   for (const end of ['end','start','both','none']) assert.ok(s.includes(`<option value="${end}">`));
   assert.match(s,/preferences = normalizePrefs\(\{\.\.\.preferences, \[field\.name\]: field\.value\}\)/);
   assert.match(s,/preferences\.arrowEnds, preferences\.arrowHeadShape\)/);
-  assert.match(s,/visibleArrowStylePatch\(selectedDrawingObjects\(\)\[0\]\?\.document, editingStyle\)/);
-  assert.match(s,/visibleArrowStylePatch\(d, preferences\)/);
+  assert.match(s,/drawingAppearancePatch\(selectedDrawingObjects\(\)\[0\]\?\.document, editingStyle\)/);
+  assert.match(s,/drawingAppearancePatch\(d, preferences\)/);
 });
 
 test('arrowhead panel stays collapsed outside active Arrow mode', async () => {
