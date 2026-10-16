@@ -2,6 +2,13 @@
 
 Short summaries of changes you can see in Foundry. See the [test report](docs/TEST-REPORT.md) for technical verification.
 
+## v0.1.13 — Locked Filter in All Drawings
+- **Simplified:** Removed the duplicate **Locked Drawings** panel. All objects, including locked Drawings, remain in one expandable **All Drawings** inventory.
+- **Clear at a glance:** Locked objects show a small, red **lock icon** alongside the name rather than repeating “Locked” on a second line.
+- **New:** A compact **Locked only** toggle sits beside the search label. It combines with text search and Show More, and can be switched off at any time.
+- **Preserved:** GM **Locate**, **Unlock**, and read-only **Info** for protected map artwork in the same list. Player permissions, native lock states, selection, Undo, Drawing geometry and IDs remain unchanged.
+- **No migration:** This is UI-only; it never automatically unlocks, imports, edits, or deletes Drawings. Live Foundry v14 browser testing is pending.
+
 ## v0.1.12 — Multi-Select from All Drawings
 - **Fixed:** Clicking **Select** on another All Drawings row adds it to the current native selection instead of clearing previously selected Drawings.
 - **Simpler:** Each selected row changes to **Deselect**, which releases only that Drawing; main **Unselect** clears all selected Drawings. No separate mode or modifier keys.

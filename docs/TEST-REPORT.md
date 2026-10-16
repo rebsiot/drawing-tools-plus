@@ -1,6 +1,13 @@
-# Test Report — Drawing Quickbar v0.1.12
+# Test Report — Drawing Quickbar v0.1.13
 
 **Date:** 2026-10-16
+
+## v0.1.13 — Unified All Drawings locked-only filter (2026-10-16)
+
+**Baseline:** Published v0.1.12 GitHub main source at commit `a18fd196df8b28c302c820ef25eb7607f8b32d4c`.
+**What changed:** Remove duplicate Locked Drawings markup and rendering. Keep one All Drawings list with red accessible lock glyphs by protected names; a small togglable Locked only button next to search label; combined locked/text search before pagination; preserve GM Unlock/Info/Locate and per-item Select/Deselect actions.
+**Automated/static tests added:** Pure filter returns only `locked === true` and does not mutate native documents; combined search/locked filter/pagination 135-object case; initial and pressed aria states; removal of duplicate locked section and count; GM-only per-row Unlock/Info retained; no Scene document changes by filter renderer; release metadata and installable ZIP.
+**Pending live Foundry v14 check:** Four-object Scene with three locked; red glyphs, 4 total, filter 3, search and Info, Unlock drops to 2 matches without altering any other Drawing, filter off restores four. Player cannot unlock/see hidden GM objects. Confirm compact layout at smaller widths.
 
 ## v0.1.12 — Additive multi-selection via All Drawings (2026-10-16)
 

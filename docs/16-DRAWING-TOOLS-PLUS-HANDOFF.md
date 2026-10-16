@@ -189,6 +189,23 @@ v0.1.3 supersedes v0.1.2 and places the Selected Drawings inspector/Lock actions
 
 **Ownership and continuity:** `foundry-drawing-quickbar` v0.1.12; stable Foundry manifest, no migration/format/API change; source still on GitHub. Previous v0.1.11 ZIP stays the rollback target. Live Foundry verification must not be asserted from Node/mock tests.
 
+## 16.1 update — v0.1.13: consolidated Drawing inventory with Locked only filter (2026-10-16)
+
+**User request:** The separate collapsed **Locked Drawings** section duplicates the **All Drawings** inventory. Replace duplicate locked status text with a small red lock icon beside a Drawing's name. Add an easy **Locked only** filter at the top right of the search area; preserve per-row GM Unlock/Info controls and the existing text search.
+
+**Source baseline:** Published v0.1.12 main commit `a18fd196df8b28c302c820ef25eb7607f8b32d4c`, module ID `foundry-drawing-quickbar`. Existing All Drawings list already includes native locked Drawings and their Locate/Unlock/Info actions; the separate locked list was redundant rendering.
+
+**Implementation:**
+- Delete the extra `<details class="dqb-locked">` from Quickbar markup and corresponding locked-list DOM references/count/render loop. **All Drawings** remains the single collapsed inventory and counts all visible-to-current-user native Scene Drawings regardless of filter.
+- Every locked Drawing gains a small red inline Font Awesome lock beside its label, with an accessible `aria-label="Locked Drawing"` and tooltip. Remove duplicate subtitle “Locked” word. Native flag `locked` is read only; never altered by rendering or filtering.
+- Compact **Locked only** button beside search label, `aria-pressed` reflects active state. Search and Show More pagination operate on the filtered subset via pure `filterLockedDrawings`. Filter is local UI state (reset on Quickbar close), not a Foundry setting or document flag. Unlocking an item drops it from locked-only results automatically.
+- GM **Locate**, **Info**, and **Unlock** actions still appear directly on the locked row; player-owned/hidden and native permission guards stay unchanged, including GM-locked gridline protection. Existing per-row Select/Deselect and batch styling are untouched.
+- CSS scopes lock icon/status and compact filter to the module; no changes to Foundry Scenes, Tokens, Actors, Drawing geometry, IDs, roles, or imported records.
+
+**Tests:** Static/mock Node coverage for combined lock+text+pagination filters, total count versus matches, toggle off/on and reset behavior, inline lock marker, no duplicate panel, retained authorized per-row Unlock/Info, no Scene writes from filtering. **Pending live v14 test:** With four test Drawings (3 locked), All Drawings shows four, Locked only shows three; red locks beside names; search finds a locked object; Locate/Info work; unlocking reduces locked matches to two while the world Drawing count stays four. Player should not gain Unlock/Info access. Back up the world and test on expendable art. No live validation claimed.
+
+**Release boundary:** Versioned v0.1.13 ZIP, same stable GitHub manifest URL and Personal Use Only license. v0.1.12 retained as rollback. Owning handoff remains this file; no shared contract or adjacent module changes.
+
 ## Source of truth and GitHub release boundaries
 
 - Use the actual GitHub source at `rebsiot/drawing-tools-plus` (default branch `main`) and/or the newest verified working ZIP. Handoff notes describe intent but are not code.
