@@ -16,6 +16,7 @@ const KEY_TO_TOOL = {v: "select", r: "rect", e: "ellipse", p: "polygon", f: "fre
 let preferences = normalizePrefs(DEFAULT_PREFS);
 let dock = null;
 let tutorialDialog = null;
+let inspectDialog = null;
 let tutorialShownThisSession = false;
 let arrowOverlay = null;
 let arrowStart = null;
@@ -346,6 +347,7 @@ function createDock() {
     if (button.dataset.action === "delete-one") await deleteOneDrawing(button.dataset.drawingId);
     if (button.dataset.action === "unlock-one") await unlockDrawing(button.dataset.drawingId);
     if (button.dataset.action === "locate-one") await locateDrawing(button.dataset.drawingId);
+    if (button.dataset.action === "inspect-one") inspectLockedDrawing(button.dataset.drawingId);
     if (button.dataset.action === "finder-more") {
       finderVisibleCount += FINDER_PAGE_SIZE;
       refreshFinder();
@@ -530,6 +532,7 @@ async function openDock({activateDrawings = true} = {}) {
 }
 function closeDock() {
   closeTutorial();
+  closeInspect();
   newDrawingSerial++;
   if (pendingStyleTimer !== null) clearTimeout(pendingStyleTimer);
   pendingStyleTimer = null;
@@ -675,6 +678,10 @@ function makeObjectRow(document, action, title, finder = false) {
     actions.append(makeActionButton(document, "delete-one",
       "Delete this native Drawing after confirmation; Undo Style cannot restore it", "Delete"));
   }
+  if (document.locked && game.user.isGM) {
+    actions.append(makeActionButton(document, "inspect-one",
+      "Read-only information about this locked Drawing", "Info"));
+  }
   row.append(summary, actions);
   return row;
 }
@@ -742,6 +749,60 @@ function refreshFinder() {
   more.hidden = remaining <= 0;
   if (remaining > 0) more.textContent = `Show ${Math.min(FINDER_PAGE_SIZE, remaining)} more`;
 }
+/** Inspect protected map art without controlling, unlocking or editing the Drawing. */
+function closeInspect() {
+  const modal = inspectDialog;
+  if (!modal) return;
+  inspectDialog = null;
+  if (modal.open) modal.close();
+  modal.remove();
+}
+function inspectLockedDrawing(id) {
+  if (!isUsable() || !game.user.isGM) return;
+  const doc = canvas.scene.drawings.get(id);
+  if (!doc || !doc.locked) return notify("This Drawing is not locked. Use Select to inspect it.");
+  closeInspect();
+  const info = drawingLabel(doc);
+  const modal = document.createElement("dialog");
+  modal.id = "dqb-inspect";
+  const heading = documentCreate("h2", "dqb-inspect-title");
+  heading.textContent = "Locked Drawing · " + info.name;
+  const explanation = documentCreate("p", "dqb-inspect-hint");
+  explanation.textContent = "Read-only details. Use Locate to find it or Unlock before editing.";
+  const data = documentCreate("dl", "dqb-inspect-details");
+  const fields = [
+    ["Type", info.kind],
+    ["ID", doc.id],
+    ["Position", `${Math.round(doc.x ?? 0)}, ${Math.round(doc.y ?? 0)}`],
+    ["Size", `${Math.round(doc.shape?.width ?? 0)} × ${Math.round(doc.shape?.height ?? 0)}`],
+    ["Author", typeof doc.author === "string" ? doc.author : (doc.author?.name ?? "Unknown")],
+    ["Text", typeof doc.text === "string" ? doc.text.slice(0, 150) : ""]
+  ];
+  for (const [name, value] of fields) {
+    const dt = documentCreate("dt");
+    dt.textContent = name;
+    const dd = documentCreate("dd");
+    dd.textContent = value || "—";
+    data.append(dt, dd);
+  }
+  const close = documentCreate("button", "dqb-inspect-close");
+  close.type = "button";
+  close.textContent = "Close";
+  close.addEventListener("click", closeInspect);
+  modal.append(heading, explanation, data, close);
+  modal.addEventListener("close", () => {
+    if (inspectDialog === modal) inspectDialog = null;
+    modal.remove();
+  });
+  document.body.append(modal);
+  inspectDialog = modal;
+  try { modal.showModal(); close.focus(); }
+  catch (error) {
+    console.warn(`${MODULE_ID} | Could not inspect locked Drawing`, error);
+    closeInspect();
+  }
+}
+
 async function selectOnlyDrawing(id) {
   if (!isUsable()) return;
   const sceneId = canvas.scene.id;
@@ -1302,7 +1363,7 @@ function showTextDialog(clientX, clientY) {
 }
 
 function onKeydown(event) {
-  if (!dock || !isUsable() || tutorialDialog?.open) return;
+  if (!dock || !isUsable() || tutorialDialog?.open || inspectDialog?.open) return;
   if (event.key === "Escape" && (arrowOverlay || textOverlay)) {
     event.preventDefault();
     exitArrow();
