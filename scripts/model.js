@@ -115,8 +115,10 @@ export function arrowPoints(start, end, head = 18, shaftWidth = 4,
     vertices.push({x: start.x, y: start.y}, point(offset(start, length * .52), halfHead),
       point(baseStart, halfShaft));
   else vertices.push({x: start.x, y: start.y},
-    point(offset(start, length * .33), halfHead * .35),
-    point(baseStart, halfHead), point(baseStart, halfShaft));
+    // A true notched V: the shaft joins near the tip while each wing extends back.
+    point(offset(start, length * .92), halfHead),
+    point(baseStart, halfHead * .75),
+    point(offset(start, length * .2), halfShaft));
 
   // Upper end outline, followed by lower end outline.
   if (!endHead) vertices.push(point(end, halfShaft), point(end, -halfShaft));
@@ -129,11 +131,14 @@ export function arrowPoints(start, end, head = 18, shaftWidth = 4,
       {x: end.x, y: end.y},
       point(offset(end, -length * .52), -halfHead),
       point(baseEnd, -halfShaft));
-  else vertices.push(point(baseEnd, halfShaft), point(baseEnd, halfHead),
-    point(offset(end, -length * .33), halfHead * .35),
+  else vertices.push(
+    point(offset(end, -length * .2), halfShaft),
+    point(baseEnd, halfHead * .75),
+    point(offset(end, -length * .92), halfHead),
     {x: end.x, y: end.y},
-    point(offset(end, -length * .33), -halfHead * .35),
-    point(baseEnd, -halfHead), point(baseEnd, -halfShaft));
+    point(offset(end, -length * .92), -halfHead),
+    point(baseEnd, -halfHead * .75),
+    point(offset(end, -length * .2), -halfShaft));
 
   // Lower outline from the shaft back to the starting end.
   if (!startHead) vertices.push(point(start, -halfShaft));
@@ -141,8 +146,9 @@ export function arrowPoints(start, end, head = 18, shaftWidth = 4,
     vertices.push(point(baseStart, -halfShaft), point(baseStart, -halfHead));
   else if (shape === "diamond")
     vertices.push(point(baseStart, -halfShaft), point(offset(start, length * .52), -halfHead));
-  else vertices.push(point(baseStart, -halfShaft), point(baseStart, -halfHead),
-    point(offset(start, length * .33), -halfHead * .35));
+  else vertices.push(point(offset(start, length * .2), -halfShaft),
+    point(baseStart, -halfHead * .75),
+    point(offset(start, length * .92), -halfHead));
   return vertices;
 }
 
@@ -183,10 +189,14 @@ export function arrowDocumentData(start, end, prefs) {
 export function isQuickbarArrow(document) {
   return document?.flags?.[MODULE_ID]?.kind === "arrow";
 }
+export function isQuickbarSilhouette(document) {
+  return ["arrow", "line", "route", "callout-leader"]
+    .includes(document?.flags?.[MODULE_ID]?.kind);
+}
 
 export function visibleArrowStylePatch(document, prefs, field = null) {
   const p = normalizePrefs(prefs);
-  if (!isQuickbarArrow(document)) return field ? singleStylePatch(field, p) : stylePatch(p);
+  if (!isQuickbarSilhouette(document)) return field ? singleStylePatch(field, p) : stylePatch(p);
   const keep = {fillType: 1, strokeWidth: 0, strokeAlpha: 0};
   switch (field) {
     case "textColor": return {textColor: p.textColor, textAlpha: 1};
@@ -377,7 +387,7 @@ export function penStylePatch(prefs) {
 
 /** Route native freehand and Quickbar arrows away from generic filled-shape styling. */
 export function drawingAppearancePatch(document, prefs, field = null) {
-  if (isQuickbarArrow(document)) return visibleArrowStylePatch(document, prefs, field);
+  if (isQuickbarSilhouette(document)) return visibleArrowStylePatch(document, prefs, field);
   if (document?.shape?.type === "f") {
     if (["filled", "fillColor", "fillAlpha"].includes(field)) return null;
     if (field) {
