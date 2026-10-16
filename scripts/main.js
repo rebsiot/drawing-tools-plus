@@ -10,6 +10,7 @@ import {TUTORIAL_STEPS, TUTORIAL_DISMISSED_FLAG, shouldAutoShowTutorial, tutoria
   from "./tutorial.js";
 import {canUseDrawingQuickbar, canSeeDrawing, canChangeDrawing}
   from "./access.js";
+import {toggleNativeDrawingSelection} from "./selection.js";
 
 const TOOLS = new Set(["select", "rect", "ellipse", "polygon", "freehand", "text"]);
 const KEY_TO_TOOL = {v: "select", r: "rect", e: "ellipse", p: "polygon", f: "freehand", t: "text", a: "arrow"};
@@ -231,7 +232,7 @@ function createDock() {
   root.setAttribute("aria-label", "Drawing Quickbar");
   root.innerHTML = `
     <div class="dqb-header">
-      <span><i class="fa-solid fa-pen-ruler" aria-hidden="true"></i> Drawing Quickbar <small>v0.1.11</small></span>
+      <span><i class="fa-solid fa-pen-ruler" aria-hidden="true"></i> Drawing Quickbar <small>v0.1.12</small></span>
       <button type="button" class="dqb-icon" data-action="close" aria-label="Close Drawing Quickbar" title="Close"><i class="fa-solid fa-xmark"></i></button>
     </div>
     <div class="dqb-content">
@@ -352,7 +353,7 @@ function createDock() {
       finderVisibleCount += FINDER_PAGE_SIZE;
       refreshFinder();
     }
-    if (button.dataset.action === "select-only") await selectOnlyDrawing(button.dataset.drawingId);
+    if (button.dataset.action === "toggle-one") await toggleDrawingSelection(button.dataset.drawingId);
     if (button.dataset.action === "edit-one-text") await beginEditDrawingText(button.dataset.drawingId);
     if (button.dataset.action === "lock-selected") await lockSelected();
     if (button.dataset.action === "open-properties") await openSelectedProperties();
@@ -662,13 +663,20 @@ function makeObjectRow(document, action, title, finder = false) {
   summary.append(details, sub);
   const actions = documentCreate("span", "dqb-object-controls");
   actions.append(makeActionButton(document, "locate-one", "Pan and highlight", "Locate"));
+  const controlled = Boolean(canvas?.drawings?.active &&
+    canvas.drawings.get(document.id)?.controlled);
+  if (finder && controlled) row.classList.add("dqb-is-selected");
   if (action && (action === "deselect-one" ||
       (action === "unlock-one" && game.user.isGM) ||
-      (action === "select-only" && canEdit(document)))) {
-    const buttonTitle = action === "select-only" ? "Select only this Drawing (clear other selections)" : title;
+      (action === "toggle-one" && canEdit(document)))) {
+    const buttonTitle = action === "toggle-one"
+      ? controlled ? "Deselect just this Drawing" : "Add this Drawing to the selection"
+      : title;
     const buttonText = action === "unlock-one" ? "Unlock" :
-      action === "select-only" ? "Select" : "Deselect";
-    actions.append(makeActionButton(document, action, buttonTitle, buttonText));
+      action === "toggle-one" && !controlled ? "Select" : "Deselect";
+    const button = makeActionButton(document, action, buttonTitle, buttonText);
+    if (action === "toggle-one") button.setAttribute("aria-pressed", String(controlled));
+    actions.append(button);
   }
   if (finder && canEdit(document)) {
     actions.append(makeActionButton(document, "edit-one-text",
@@ -742,8 +750,8 @@ function refreshFinder() {
     : "No matching Drawings";
   results.replaceChildren(...(found.shown.length
     ? found.shown.map(doc => makeObjectRow(doc,
-      doc.locked ? "unlock-one" : "select-only",
-      doc.locked ? "Unlock drawing" : "Select only this Drawing", true))
+      doc.locked ? "unlock-one" : "toggle-one",
+      doc.locked ? "Unlock drawing" : "Add or remove this Drawing from selection", true))
     : [Object.assign(documentCreate("p", "dqb-empty"), {textContent: "Try a different search"})]));
   const remaining = found.matches - found.shown.length;
   more.hidden = remaining <= 0;
@@ -803,24 +811,28 @@ function inspectLockedDrawing(id) {
   }
 }
 
-async function selectOnlyDrawing(id) {
+async function toggleDrawingSelection(id) {
   if (!isUsable()) return;
   const sceneId = canvas.scene.id;
   const doc = canvas.scene.drawings.get(id);
   if (!canEdit(doc)) return notify("You can select only your own unlocked Drawings.");
   try {
-    // Explicitly selecting a Drawing from Tokens is the point we change layers.
-    if (!canvas.drawings.active) await ui.controls.activate({control: "drawings", tool: "select"});
-    if (canvas.scene?.id !== sceneId || !canvas.drawings.active) return;
+    // Activate native Drawing Select when invoked from Tokens or another drawing tool.
+    // Once active, adding another Drawing must preserve every earlier selection.
+    if (!canvas.drawings.active || ui.controls?.tool?.name !== "select") {
+      await ui.controls.activate({control: "drawings", tool: "select"});
+    }
+    // Recheck the scene, original identity and ownership after asynchronous activation.
+    if (canvas.scene?.id !== sceneId || !canvas.drawings.active ||
+        canvas.scene.drawings.get(id) !== doc || !canEdit(doc)) return;
     const placeable = canvas.drawings.get(id);
     if (!placeable) return notify("This Drawing has no visible canvas object. Locate is still available.");
-    // A deliberate one-object selection avoids accidentally editing painted grids.
-    canvas.drawings.releaseAll();
-    if (!placeable.control({releaseOthers: true})) return notify("Foundry could not select this Drawing.");
+    const result = toggleNativeDrawingSelection(placeable);
+    if (result === "failed") return notify("Foundry could not change this Drawing's selection.");
     refreshSelectedPanel();
   } catch (error) {
-    console.error(MODULE_ID + " | Select Drawing failed", error);
-    notify("Could not select Drawing. See console.", "error");
+    console.error(MODULE_ID + " | Toggle Drawing selection failed", error);
+    notify("Could not change Drawing selection. See console.", "error");
   }
 }
 /** This is a local HTML marker, never a Scene Drawing and never a broadcast ping. */
@@ -1473,5 +1485,5 @@ Hooks.once("ready", () => {
     // A tool switch or Scene navigation should never leave an invisible input shield over the canvas.
     if (arrowOverlay && !arrowOverlay.contains(event.target) && !dock?.contains(event.target) && !canvas?.drawings?.active) exitArrow();
   });
-  console.info(`${MODULE_ID} | v0.1.11 ready (Foundry v14 native Drawing workflow)`);
+  console.info(`${MODULE_ID} | v0.1.12 ready (Foundry v14 native Drawing workflow)`);
 });
