@@ -411,3 +411,29 @@
   #foundry-drawing-quickbar .dqb-tools { gap: 3px; }
   #foundry-drawing-quickbar .dqb-tools button { font-size: 9px; }
 }
+
+/* Read-only protected-Drawing details; never enables canvas selection. */
+#dqb-inspect {
+  width: min(430px, calc(100vw - 28px));
+  max-height: 78vh;
+  overflow-y: auto;
+  margin: auto; padding: 18px;
+  border: 1px solid #7d8ca1; border-radius: 9px;
+  color: #f2f4f8; background: #232d38;
+  font: 13px/1.4 var(--font-primary, Arial, sans-serif);
+  box-shadow: 0 12px 40px #0009;
+}
+#dqb-inspect::backdrop { background: #0009; }
+#dqb-inspect .dqb-inspect-title { margin: 0 0 5px; font-size: 17px; color: #fff; }
+#dqb-inspect .dqb-inspect-hint { margin: 0 0 12px; color: #c4cfdb; }
+#dqb-inspect .dqb-inspect-details {
+  display: grid; grid-template-columns: 80px 1fr;
+  gap: 7px 11px; margin: 0 0 15px; word-break: break-word;
+}
+#dqb-inspect dt { color: #b9c8d9; font-weight: 600; }
+#dqb-inspect dd { margin: 0; user-select: text; }
+#dqb-inspect .dqb-inspect-close {
+  color: #f6f6f7; background: #46556b;
+  border: 1px solid #8193aa; border-radius: 5px;
+  padding: 7px 15px; cursor: pointer;
+}
