@@ -98,24 +98,31 @@ export function arrowPoints(start, end, head = 18, shaftWidth = 4,
   const length = Math.min(Math.max(2, head), distance * 0.45);
   const halfShaft = Math.min(Math.max(0.5, shaftWidth / 2), length * 0.28);
   const halfHead = Math.min(Math.max(halfShaft * 2.4, length * 0.48), distance * 0.3);
-  // An open-chevron uses a single native freehand stroke, not a filled
-  // polygon. It is unmistakably different from the solid triangle and remains
-  // one native Drawing with the same arrow author/permission contracts.
+  // Distinct, concave two-pronged V ends in one valid native v14 polygon.
+  // Unlike filled triangles, a deep center notch remains visibly open.
   if (shape === "chevron") {
-    const wing = (origin, along, side) => ({
-      x: origin.x + ux * along + px * side,
-      y: origin.y + uy * along + py * side
+    const pointAt = (origin, along, sideways) => ({
+      x: origin.x + ux * along + px * sideways,
+      y: origin.y + uy * along + py * sideways
     });
+    const wing = halfHead * .85;
+    const notch = length * .55;
     const result = [];
-    if (startHead) {
-      result.push(wing(start, length, halfHead), {...start},
-        wing(start, length, -halfHead), {...start});
-    } else result.push({...start});
-    result.push({...end});
-    if (endHead) {
-      result.push(wing(end, -length, halfHead), {...end},
-        wing(end, -length, -halfHead));
-    }
+    // Trace the perimeter consistently from lower edge to upper edge.
+    if (startHead) result.push(
+      pointAt(start, 0, wing), pointAt(start, notch, 0),
+      pointAt(start, 0, -wing), pointAt(start, length, -halfHead),
+      pointAt(start, length, -halfShaft));
+    else result.push(pointAt(start, 0, -halfShaft));
+    if (endHead) result.push(
+      pointAt(end, -length, -halfShaft), pointAt(end, -length, -halfHead),
+      pointAt(end, 0, -wing), pointAt(end, -notch, 0),
+      pointAt(end, 0, wing), pointAt(end, -length, halfHead),
+      pointAt(end, -length, halfShaft));
+    else result.push(pointAt(end, 0, -halfShaft), pointAt(end, 0, halfShaft));
+    if (startHead) result.push(pointAt(start, length, halfShaft),
+      pointAt(start, length, halfHead));
+    else result.push(pointAt(start, 0, halfShaft));
     return result;
   }
   const offset = (origin, distanceAlong) => ({
@@ -185,20 +192,19 @@ export function arrowDocumentData(start, end, prefs) {
   const flat = points.flatMap(point => [
     Number((point.x - x).toFixed(2)), Number((point.y - y).toFixed(2))
   ]);
-  const openChevron = p.arrowHeadShape === "chevron";
   return {
     name: "Arrow",
     x, y,
-    shape: {type: openChevron ? "f" : "p", width, height, points: flat},
+    shape: {type: "p", width, height, points: flat},
     ...stylePatch({...p, filled: false}),
-    fillType: openChevron ? 0 : 1,
+    fillType: 1,
     fillColor: p.strokeColor,
-    fillAlpha: openChevron ? 0 : Math.max(0.3, p.strokeAlpha),
-    strokeWidth: openChevron ? p.strokeWidth : 0,
-    strokeAlpha: openChevron ? p.strokeAlpha : 0,
+    fillAlpha: Math.max(0.3, p.strokeAlpha),
+    strokeWidth: 0,
+    strokeAlpha: 0,
     flags: {[MODULE_ID]: {
       kind: "arrow", ends: p.arrowEnds, headShape: p.arrowHeadShape,
-      version: openChevron ? 4 : 3
+      version: p.arrowHeadShape === "chevron" ? 4 : 3
     }}
   };
 }
