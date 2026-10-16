@@ -361,6 +361,28 @@ export function singleStylePatch(name, prefs) {
   }
 }
 
+/** Protect native freehand Pen paths from being closed and flood-filled.
+ * Unlike a polygon Drawing, a freehand shape must remain an open stroke.
+ */
+export function penStylePatch(prefs) {
+  const p = stylePatch(prefs);
+  return {...p, fillType: 0, fillAlpha: 0, strokeAlpha: Math.max(.1, p.strokeAlpha)};
+}
+
+/** Route native freehand and Quickbar arrows away from generic filled-shape styling. */
+export function drawingAppearancePatch(document, prefs, field = null) {
+  if (isQuickbarArrow(document)) return visibleArrowStylePatch(document, prefs, field);
+  if (document?.shape?.type === "f") {
+    if (["filled", "fillColor", "fillAlpha"].includes(field)) return null;
+    if (field) {
+      const patch = singleStylePatch(field, prefs);
+      return patch && {...patch, fillType: 0, fillAlpha: 0};
+    }
+    return penStylePatch(prefs);
+  }
+  return field ? singleStylePatch(field, prefs) : stylePatch(prefs);
+}
+
 /** Locked objects never become automatic editing targets. */
 export function styleTargetMode(selected = []) {
   const all = [...selected];
