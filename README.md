@@ -1,8 +1,10 @@
-# Drawing Tools+ — v0.1.14 Beta
+# Drawing Tools+ — v0.1.15 Beta
 
 **Foundry:** v14 · **Module ID:** `foundry-drawing-quickbar` · **License:** [Personal Use Only (No Redistribution)](LICENSE.md)
 
 A small floating toolbar for **native Foundry Scene Drawings**. No extra drawing engine or World of Darkness dependency.
+
+**Launcher icon:** Both Token Controls and Drawing Controls now show the same **pen-and-ruler** symbol as the Drawing Quickbar header—not Foundry's generic Palette icon. This is a visual change only; both buttons still open the same toolbar.
 
 ## Core workflow
 
@@ -40,7 +42,7 @@ Install through **Foundry Setup → Add-on Modules → Install by Manifest URL**
 
 On a disposable Scene with copied/temporary art:
 
-1. Confirm the first six tools fit on one row, Arrow is beneath them, **All Drawings is above Selected Drawings**, and the three sliders still have reduced vertical gaps.
+1. Confirm **Token Controls and Drawing Controls** use the pen-and-ruler Quickbar launcher, distinct from Foundry's Palette icon. Both must open the same toolbar. The six tools still fit on one row, Arrow is beneath them, **All Drawings is above Selected Drawings**, and the sliders retain their tighter spacing.
 2. Select **Filled**, then **Pen**. Draw a curved, open path. Confirm its endpoints are not connected, it has no filled interior and the stroke survives a refresh. Restyle the stroke with Outline or Danger.
 3. Expand **All Drawings** and click Select repeatedly on at least five expendable Drawings. The clicked rows must stay in exactly the same vertical positions; none of their buttons should jump sideways or lose focus. Each selected row becomes Deselect, and the selection count/list below All Drawings grows. Deselect the middle Drawing: all other selections remain. Apply a preset using **Apply to N Selected** and verify only those Drawings change.
 4. Click the main **Unselect** control: all Drawings should become deselected, but their positions and styles must not change.
@@ -48,12 +50,12 @@ On a disposable Scene with copied/temporary art:
 6. Player with **Use Drawing Tools** enabled: draw a shape, then style, move and delete that shape. Confirm the player cannot change GM artwork, another player's art, or a locked map gridline. Repeat with the player tutorial.
 7. Check the Text dialog and arrows, Undo Style Change, a large All Drawings list, and that no selection/delete action rewrites protected gridlines.
 
-Report the exact Foundry v14 build and the **first browser console error** if a test fails. The new code has automated/unit/mock tests and ZIP packaging checks; **the new stable-click multi-select layout and earlier GM/player/Pen behavior have not been verified live on your Foundry instance**.
+Report the exact Foundry v14 build and the **first browser console error** if a test fails. The new code has automated/unit/mock tests and ZIP packaging checks; **the revised launcher icon and earlier GM/player/Pen behavior have not been verified live on your Foundry instance**.
 
 ## Known limits and rollback
 
 The Quickbar uses native Drawing documents and native permissions. It does not provide custom user-named style libraries, grouping/layer replacement, advanced snapping, or a separate undo history. Background/Working groups remain planned, not implemented.
 
-To revert module code, install [v0.1.13](https://github.com/rebsiot/drawing-tools-plus/releases/tag/v0.1.13). This does **not** undo saved Scene document changes or restore deleted Drawings—keep your matching world backup.
+To revert module code, install [v0.1.14](https://github.com/rebsiot/drawing-tools-plus/releases/tag/v0.1.14). This does **not** undo saved Scene document changes or restore deleted Drawings—keep your matching world backup.
 
-[Readable Changelog](CHANGELOG.md) · [Release Notes](docs/releases/v0.1.14.md) · [Tests](docs/TEST-REPORT.md) · [Development Handoff](docs/16-DRAWING-TOOLS-PLUS-HANDOFF.md)
+[Readable Changelog](CHANGELOG.md) · [Release Notes](docs/releases/v0.1.15.md) · [Tests](docs/TEST-REPORT.md) · [Development Handoff](docs/16-DRAWING-TOOLS-PLUS-HANDOFF.md)

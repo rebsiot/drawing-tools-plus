@@ -2,6 +2,11 @@
 
 Short summaries of changes you can see in Foundry. See the [test report](docs/TEST-REPORT.md) for technical verification.
 
+## v0.1.15 — Clear Drawing Quickbar Launcher Icon
+- **Improved:** Both Token Controls and Drawing Controls now use the **pen-and-ruler** launcher icon, matching the Drawing Quickbar header instead of looking like Foundry's existing Palette control.
+- **Unchanged:** One shared Quickbar, Token/Drawing layer switching, author permissions, selected Drawings, locked protections, Scene data and existing module ID. No migration or user action is needed beyond updating.
+- **Testing:** Automated/mock regression and ZIP packaging checks; visual placement in a live Foundry v14 client still needs confirmation.
+
 ## v0.1.14 — Stable Multi-Select, No Jumping
 - **Fixed:** **All Drawings** remains above the entire **Selected Drawings** box. Growing the selection no longer pushes the next Select button down the screen.
 - **Fixed:** Selecting or deselecting updates existing All Drawings buttons/highlights **in place** rather than rebuilding every row and losing button focus.

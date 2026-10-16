@@ -221,6 +221,14 @@ v0.1.3 supersedes v0.1.2 and places the Selected Drawings inspector/Lock actions
 
 **Owning handoff:** `docs/16-DRAWING-TOOLS-PLUS-HANDOFF.md`, v0.1.14 beta, source from verified v0.1.13 main SHA `921a3e3efe3ffffe0c99ef52c558317c7a1a5560`. Roll back module to v0.1.13 if needed; backups protect world data. No shared contract changes.
 
+## 16.1 update — v0.1.15: clarify launcher icon (2026-10-16)
+
+**User feedback:** The icon in Foundry's Token Controls looks like the existing *Palette* icon and does not clearly represent Drawing Quickbar. User confirmed the intended target was the **palette icon on Token Controls**, and approved the replacement immediately.
+
+**Change:** In the shared `getSceneControlButtons` declaration for both `"tokens"` and `"drawings"`, replace Font Awesome `fa-solid fa-palette` with the already-used `fa-solid fa-pen-ruler` symbol from the Quickbar header. It affects only the two launch buttons. One shared dock, native control activation, permissions, document semantics, module ID `foundry-drawing-quickbar` and manifest URL remain unchanged. The new release is `v0.1.15`; previous `v0.1.14` remains the rollback target.
+
+**Tests:** Source/mock assertions require the new icon on the shared launcher declaration and match it to the header, while prohibiting the former launcher palette icon. Existing Node/mock, syntax, ZIP and main validation must pass. **Live browser check still required:** confirm a distinct pen-and-ruler button appears under Token Controls and Drawings, and both toggle the same toolbar without changing selected tokens or native Drawings.
+
 ## Source of truth and GitHub release boundaries
 
 - Use the actual GitHub source at `rebsiot/drawing-tools-plus` (default branch `main`) and/or the newest verified working ZIP. Handoff notes describe intent but are not code.

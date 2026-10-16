@@ -233,7 +233,7 @@ function createDock() {
   root.setAttribute("aria-label", "Drawing Quickbar");
   root.innerHTML = `
     <div class="dqb-header">
-      <span><i class="fa-solid fa-pen-ruler" aria-hidden="true"></i> Drawing Quickbar <small>v0.1.14</small></span>
+      <span><i class="fa-solid fa-pen-ruler" aria-hidden="true"></i> Drawing Quickbar <small>v0.1.15</small></span>
       <button type="button" class="dqb-icon" data-action="close" aria-label="Close Drawing Quickbar" title="Close"><i class="fa-solid fa-xmark"></i></button>
     </div>
     <div class="dqb-content">
@@ -1459,7 +1459,7 @@ Hooks.once("init", () => {
       const tools = controls[controlName]?.tools;
       if (!tools) continue;
       tools.drawingQuickbar = {
-        name: "drawingQuickbar", title: "Drawing Quickbar", icon: "fa-solid fa-palette",
+        name: "drawingQuickbar", title: "Drawing Quickbar", icon: "fa-solid fa-pen-ruler",
         order: 95, button: true, visible: true,
         onChange: () => toggleDock({activateDrawings: controlName === "drawings"})
       };
@@ -1533,5 +1533,5 @@ Hooks.once("ready", () => {
     // A tool switch or Scene navigation should never leave an invisible input shield over the canvas.
     if (arrowOverlay && !arrowOverlay.contains(event.target) && !dock?.contains(event.target) && !canvas?.drawings?.active) exitArrow();
   });
-  console.info(`${MODULE_ID} | v0.1.14 ready (Foundry v14 native Drawing workflow)`);
+  console.info(`${MODULE_ID} | v0.1.15 ready (Foundry v14 native Drawing workflow)`);
 });

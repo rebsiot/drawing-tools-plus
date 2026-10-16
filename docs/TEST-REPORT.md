@@ -1,6 +1,12 @@
-# Test Report — Drawing Quickbar v0.1.14
+# Test Report — Drawing Quickbar v0.1.15
 
 **Date:** 2026-10-16
+
+## v0.1.15 — Token/Drawing launcher icon (2026-10-16)
+
+**Source:** `scripts/main.js` shared Foundry v14 `getSceneControlButtons` control declaration. The previous `fa-solid fa-palette` launcher is replaced by `fa-solid fa-pen-ruler`, matching the existing Quickbar header. Both launch points share this declaration, one dock instance, and their existing native layer behavior.
+
+**Automated regression:** Shared icon/header match, prohibition of old launcher icon, continued two-launcher and permission-control checks, release manifest and versioned ZIP packaging. **Live verification remains pending:** render the icon in Token and Drawing controls, confirm it differs from the native Palette button and still opens the correct toolbar. No Drawing, Token, Actor, Scene or settings migration.
 
 ## v0.1.14 — Stable All Drawings list during multi-selection (2026-10-16)
 
