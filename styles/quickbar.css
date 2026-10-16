@@ -210,3 +210,32 @@
   background: #29323d; border-left: 3px solid #b4cced;
 }
 #foundry-drawing-quickbar:not(.dqb-multi-selection) [data-action="apply-selected"] {display:none;}
+
+/* All Drawings inventory matches the Locked Drawings collapsible section. */
+#foundry-drawing-quickbar .dqb-finder {
+  margin: 10px 0 0;
+  padding: 6px 8px;
+  background: transparent;
+  border-color: #536073;
+}
+#foundry-drawing-quickbar .dqb-finder summary {
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: normal;
+}
+#foundry-drawing-quickbar .dqb-finder summary span {
+  float: none;
+  color: inherit;
+}
+#foundry-drawing-quickbar .dqb-find-results {
+  max-height: 220px;
+}
+#foundry-drawing-quickbar .dqb-finder-more {
+  width: 100%;
+  margin-top: 6px;
+  padding: 6px 8px;
+  font-size: 11px;
+}
+#foundry-drawing-quickbar .dqb-finder-more[hidden] {
+  display: none;
+}

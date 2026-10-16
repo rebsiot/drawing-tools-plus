@@ -243,3 +243,26 @@ test('adding a label to a native ellipse restores text visibility without changi
   assert.ok(!('shape' in patch) && !('flags' in patch));
   assert.deepEqual(ellipse,original);
 });
+
+test('All Drawings can show more than 250 items without altering Scene data', () => {
+  const many = Array.from({length: 305}, (_, i) => ({
+    id: `drawing-${String(i).padStart(3, '0')}`,
+    name: 'Drawing',
+    shape: {type: i % 2 ? 'e' : 'r'},
+    locked: i % 3 === 0,
+    text: i === 301 ? 'lost a' : '',
+    x: i, y: i * 2
+  }));
+  const before = structuredClone(many);
+  const first = findSceneDrawings(many, '', 60);
+  const second = findSceneDrawings(many, '', 120);
+  const all = findSceneDrawings(many, '', 305);
+  assert.equal(first.total, 305);
+  assert.equal(first.matches, 305);
+  assert.equal(first.shown.length, 60);
+  assert.equal(second.shown.length, 120);
+  assert.equal(all.shown.length, 305);
+  assert.equal(findSceneDrawings(many, 'lost a').shown[0].id, 'drawing-301');
+  assert.equal(findSceneDrawings(many, 'ellipse').matches, 152);
+  assert.deepEqual(many, before);
+});

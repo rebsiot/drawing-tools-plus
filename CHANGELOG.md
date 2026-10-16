@@ -2,6 +2,13 @@
 
 Short summaries of changes you can see in Foundry. See the [test report](docs/TEST-REPORT.md) for technical verification.
 
+## v0.1.6 — All Drawings at a Glance
+- **New:** A collapsed **All Drawings** list sits directly beneath Locked Drawings, with a total count and search.
+- **Improved:** Generic shapes show their type, a short ID and map coordinates to distinguish similar objects.
+- **Retained:** Locate, Select, Unlock and Text actions are available in the list.
+- **Fixed:** Large Scenes no longer stop at the first 60 results; **Show More** reveals additional Drawings in batches.
+- **Unchanged:** Native Drawing data, locking behavior, Quick Styles and appearance controls.
+
 ## v0.1.5 — Draw, Then Edit
 - **New:** Shapes become selected after creation so you can move/resize them immediately.
 - **Changed:** Presets and style controls directly change **one selected Drawing**.

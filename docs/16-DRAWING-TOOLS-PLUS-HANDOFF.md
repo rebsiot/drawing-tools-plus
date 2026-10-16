@@ -78,6 +78,22 @@ v0.1.3 supersedes v0.1.2 and places the Selected Drawings inspector/Lock actions
 
 **Status:** Automated/mock tests and packaged ZIP must pass CI before advancing permanent manifest. Live v14 behavior is not yet verified for this beta. Outstanding protected background/working grouping remains GitHub issue #1. Before submitting to Foundry's official directory, the owner should review human-authored public UI/release text for policy compliance.
 
+## 16.1 update — v0.1.6: All Drawings collapsed inventory (2026-10-16)
+
+**Request:** Keep established design-software term *style*. GM wants an easily discoverable collapsed **All Drawings** list next to **Locked Drawings**, with a complete inventory of items on the current Scene.
+
+**Current source baseline verified:** v0.1.5 already had a collapsed Find Drawing view which searched all Scene Drawings, but the heading suggested a search-only utility, was separated from Locked Drawings, and capped visible results at 60 of at most 250.
+
+**v0.1.6 changes (automated/mock tests only until live verification):**
+- Reuse the existing Finder (no parallel list), place directly after Locked Drawings, rename to **All Drawings (N)**. Closed by default, count updates dynamically. Render rows only while expanded.
+- Keep text/name/type/ID search and per-object Locate, Select or Unlock, plus Text (add/edit label on any unlocked native Drawing). Show shape type, short ID for generic names, and native map coordinates.
+- Show the first 60 results with **Show More** batches of 60 for arbitrarily large Scenes; reset pagination when search changes.
+- Preserve all native Drawing IDs, geometry, locking and Scene Documents; no migration, auto-lock, deletion, or additional layer.
+- Keep `foundry-drawing-quickbar` module ID, v14 target, stable manifest, Personal Use Only license, and independent versioned ZIP.
+- Next test: on a backed-up test Scene, expand All Drawings, verify count and search, locate a stray drawing, confirm only explicit Select affects selection, unlock only an intentional locked item, and test Show More if >60 drawings. Verify painted gridlines remain untouched after refresh.
+
+**Status:** v0.1.6 runtime and release notes are prepared; CI must pass before stable manifest advances. Live verification remains pending. Future Background/Working groups tracked in GitHub issue #1.
+
 ## Source of truth and GitHub release boundaries
 
 - Use the actual GitHub source at `rebsiot/drawing-tools-plus` (default branch `main`) and/or the newest verified working ZIP. Handoff notes describe intent but are not code.

@@ -29,6 +29,8 @@ let pendingStyle = null;
 let pendingStyleTimer = null;
 let styleWriteQueue = Promise.resolve();
 let newDrawingSerial = 0;
+const FINDER_PAGE_SIZE = 60;
+let finderVisibleCount = FINDER_PAGE_SIZE;
 let saveQueue = Promise.resolve();
 let saveTimer = null;
 
@@ -173,7 +175,7 @@ function createDock() {
   root.setAttribute("aria-label", "Drawing Quickbar");
   root.innerHTML = `
     <div class="dqb-header">
-      <span><i class="fa-solid fa-pen-ruler" aria-hidden="true"></i> Drawing Quickbar <small>v0.1.5</small></span>
+      <span><i class="fa-solid fa-pen-ruler" aria-hidden="true"></i> Drawing Quickbar <small>v0.1.6</small></span>
       <button type="button" class="dqb-icon" data-action="close" aria-label="Close Drawing Quickbar" title="Close"><i class="fa-solid fa-xmark"></i></button>
     </div>
     <div class="dqb-content">
@@ -201,17 +203,18 @@ function createDock() {
           <summary>Locked Drawings (<span data-value="locked-count">0</span>)</summary>
           <div class="dqb-locked-list"></div>
         </details>
+        <details class="dqb-finder" aria-label="All Drawings on this Scene">
+          <summary>All Drawings (<span data-value="scene-drawing-count">0</span>)</summary>
+          <label class="dqb-find-label">
+            Search drawings
+            <input type="search" data-role="drawing-search" aria-label="Search all Scene Drawings" placeholder="Text, name, shape or ID" autocomplete="off">
+          </label>
+          <small class="dqb-find-status" role="status"></small>
+          <div class="dqb-find-results"></div>
+          <button type="button" data-action="finder-more" class="dqb-finder-more" hidden>Show more</button>
+          <p class="dqb-find-help">Locate pans and highlights a Drawing in your view. Select targets only that object; locked items can be unlocked here.</p>
+        </details>
       </section>
-      <details class="dqb-finder" aria-label="Find drawing on this Scene">
-        <summary><i class="fa-solid fa-magnifying-glass" aria-hidden="true"></i> FIND DRAWING <span data-value="scene-drawing-count">0</span></summary>
-        <label class="dqb-find-label">
-          Search all Scene Drawings
-          <input type="search" data-role="drawing-search" aria-label="Search Scene Drawings" placeholder="Text, name, type or ID" autocomplete="off">
-        </label>
-        <small class="dqb-find-status" role="status"></small>
-        <div class="dqb-find-results"></div>
-        <p class="dqb-find-help">Locate centers and highlights a Drawing just for you. Select replaces the current selection.</p>
-      </details>
       <div class="dqb-section-title">STYLE PRESETS</div>
       <div class="dqb-style-scope" data-role="style-scope" aria-live="polite">Setting new-Drawing defaults.</div>
       <div class="dqb-presets" role="group" aria-label="Style presets">
@@ -261,6 +264,10 @@ function createDock() {
     }
     if (button.dataset.action === "unlock-one") await unlockDrawing(button.dataset.drawingId);
     if (button.dataset.action === "locate-one") await locateDrawing(button.dataset.drawingId);
+    if (button.dataset.action === "finder-more") {
+      finderVisibleCount += FINDER_PAGE_SIZE;
+      refreshFinder();
+    }
     if (button.dataset.action === "select-only") selectOnlyDrawing(button.dataset.drawingId);
     if (button.dataset.action === "edit-one-text") beginEditDrawingText(button.dataset.drawingId);
     if (button.dataset.action === "lock-selected") await lockSelected();
@@ -273,6 +280,7 @@ function createDock() {
   root.addEventListener("input", event => {
     const input = event.target;
     if (input instanceof HTMLInputElement && input.dataset.role === "drawing-search") {
+      finderVisibleCount = FINDER_PAGE_SIZE;
       refreshFinder();
       return;
     }
@@ -298,6 +306,7 @@ function createDock() {
     updateDockInputs();
   });
   dock = root;
+  root.querySelector(".dqb-finder").addEventListener("toggle", refreshFinder);
   updateDockInputs();
 }
 
@@ -321,6 +330,7 @@ function closeDock() {
   exitTextPlacement();
   dock?.remove();
   dock = null;
+  finderVisibleCount = FINDER_PAGE_SIZE;
 }
 function toggleDock() { return dock ? closeDock() : openDock(); }
 
@@ -408,11 +418,16 @@ function makeObjectRow(document, action, title, finder = false) {
   const details = documentCreate("span", "dqb-object-name");
   // Prioritize actual text so a stray single-letter label can be located by name.
   const textPreview = typeof document.text === "string" ? document.text.trim() : "";
-  details.textContent = textPreview ? textPreview.slice(0, 70) : label.name;
+  const generic = !textPreview && (!label.name || label.name === "Drawing" || label.name === "Untitled");
+  details.textContent = textPreview ? textPreview.slice(0, 70)
+    : finder && generic ? `${label.kind} · ${String(document.id ?? "").slice(0, 8)}`
+    : label.name;
   details.title = label.name + " (" + (document.id ?? "") + ")";
   const sub = documentCreate("small", "dqb-object-kind");
+  const place = finder && Number.isFinite(document.x) && Number.isFinite(document.y)
+    ? ` · ${Math.round(document.x)}, ${Math.round(document.y)}` : "";
   sub.textContent = label.kind + (label.locked ? " · Locked" : "") +
-    (document.hidden ? " · Hidden" : "");
+    (document.hidden ? " · Hidden" : "") + place;
   const summary = documentCreate("span", "dqb-object-summary");
   summary.append(details, sub);
   const actions = documentCreate("span", "dqb-object-controls");
@@ -423,8 +438,9 @@ function makeObjectRow(document, action, title, finder = false) {
       action === "select-only" ? "Select" : "Remove";
     actions.append(makeActionButton(document, action, buttonTitle, buttonText));
   }
-  if (finder && !document.locked && textPreview) {
-    actions.append(makeActionButton(document, "edit-one-text", "Edit this text Drawing", "Edit"));
+  if (finder && !document.locked) {
+    actions.append(makeActionButton(document, "edit-one-text",
+      textPreview ? "Edit Drawing text" : "Add a text label to this Drawing", "Text"));
   }
   row.append(summary, actions);
   return row;
@@ -465,23 +481,30 @@ function refreshSelectedPanel() {
 }
 
 
-/** Search reads live Scene documents, including locked and currently unselected Drawings. */
+/** All native Scene Drawings, including locked/hidden items, shown only while expanded. */
 function refreshFinder() {
   if (!dock) return;
+  const panel = dock.querySelector(".dqb-finder");
   const input = dock.querySelector('[data-role="drawing-search"]');
   const results = dock.querySelector(".dqb-find-results");
   const status = dock.querySelector(".dqb-find-status");
-  if (!input || !results || !status) return;
-  const found = findSceneDrawings(sceneDrawingDocuments(), input.value, 60);
-  dock.querySelector('[data-value="scene-drawing-count"]').textContent = String(found.total);
+  const more = dock.querySelector('[data-action="finder-more"]');
+  if (!panel || !input || !results || !status || !more) return;
+  const documents = sceneDrawingDocuments();
+  dock.querySelector('[data-value="scene-drawing-count"]').textContent = String(documents.length);
+  if (!panel.open) return; // Keep the closed panel cheap on frequent Drawing updates.
+  const found = findSceneDrawings(documents, input.value, finderVisibleCount);
   status.textContent = found.matches
-    ? "Showing " + found.shown.length + " of " + found.matches + " matches"
+    ? `Showing ${found.shown.length} of ${found.matches} Drawing${found.matches === 1 ? "" : "s"}`
     : "No matching Drawings";
   results.replaceChildren(...(found.shown.length
     ? found.shown.map(doc => makeObjectRow(doc,
       doc.locked ? "unlock-one" : "select-only",
       doc.locked ? "Unlock drawing" : "Select only this Drawing", true))
     : [Object.assign(documentCreate("p", "dqb-empty"), {textContent: "Try a different search"})]));
+  const remaining = found.matches - found.shown.length;
+  more.hidden = remaining <= 0;
+  if (remaining > 0) more.textContent = `Show ${Math.min(FINDER_PAGE_SIZE, remaining)} more`;
 }
 function selectOnlyDrawing(id) {
   if (!isUsable() || !canvas.drawings.active) return;
@@ -1064,5 +1087,5 @@ Hooks.once("ready", () => {
     // A tool switch or Scene navigation should never leave an invisible input shield over the canvas.
     if (arrowOverlay && !arrowOverlay.contains(event.target) && !dock?.contains(event.target) && !canvas?.drawings?.active) exitArrow();
   });
-  console.info(`${MODULE_ID} | v0.1.5 ready (Foundry v14 native Drawing workflow)`);
+  console.info(`${MODULE_ID} | v0.1.6 ready (Foundry v14 native Drawing workflow)`);
 });

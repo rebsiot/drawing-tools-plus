@@ -242,7 +242,8 @@ export function findSceneDrawings(documents, query = "", limit = 60) {
     .sort((a, b) => a.score - b.score ||
       drawingLabel(a.doc).name.localeCompare(drawingLabel(b.doc).name) ||
       a.doc.id.localeCompare(b.doc.id));
-  const safeLimit = Number.isFinite(limit) ? Math.max(1, Math.min(Math.trunc(limit), 250)) : 60;
+  // The Show More action can reveal every Scene Drawing without a hidden 250-item cap.
+  const safeLimit = Number.isFinite(limit) ? Math.max(1, Math.min(Math.trunc(limit), matched.length || 1)) : 60;
   return {total: all.length, matches: matched.length, shown: matched.slice(0, safeLimit).map(entry => entry.doc)};
 }
 

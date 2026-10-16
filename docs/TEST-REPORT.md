@@ -1,6 +1,16 @@
-# Test Report — Drawing Quickbar v0.1.5
+# Test Report — Drawing Quickbar v0.1.6
 
 **Date:** 2026-10-16
+
+## v0.1.6 — All Drawings inventory checks (2026-10-16)
+
+**Baseline:** Verified current `main` v0.1.5 source and its existing Find Drawing panel.
+
+**Automated additions:** All-Drawings search on 305 mock native Documents (locked and unlocked), pagination at 60, 120 and 305, search ranking, invariant original Scene data, and source UI checks for collapsed list inside selection, count, toggle rendering, Show More, unlock and text actions.
+
+**Safety:** The list reads existing Drawing documents. Opening, searching, and Locate do not modify Scene data; only explicit Select/Unlock/Text controls have side effects. No migration or automatic selection.
+
+**Still live-unverified:** Foundry v14 display/layout and performance on a large Scene, row actions, and gridline protection.
 
 ## v0.1.5 — Direct editing test coverage (2026-10-16)
 
