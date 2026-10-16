@@ -3,7 +3,7 @@
 **Suggested next conversation:** `16.1 - Drawing Tools+ Live Beta` (follow with `16.2`, `16.3`, and so on).
 **Independent module ID:** `foundry-drawing-quickbar` (do not rename casually: module settings, CSS, and Drawing flags use this ID).
 **GitHub repository:** https://github.com/rebsiot/drawing-tools-plus
-**Starting version:** 0.1.0, original full ZIP `foundry-drawing-quickbar-0.1.0.zip` (2026-10-16).
+**Starting version:** 0.1.0, GitHub prerelease `v0.1.0` uses a Foundry manifest-installable ZIP (2026-10-16).
 **Baseline:** Foundry v14; no dependency on WoD20 or TC Modern.
 **Status:** 11/11 automated/mock tests passed; **live Foundry test not yet performed**. No official Foundry package publication has occurred.
 **Code provenance:** first source import from the 0.1.0 ZIP; metadata/documentation/CI additions only, not a tested functionality upgrade.
@@ -18,9 +18,9 @@ The current module has native selection/freehand/rectangle/ellipse/polygon/text 
 
 - Use the actual GitHub source at `rebsiot/drawing-tools-plus` (default branch `main`) and/or the newest verified working ZIP. Handoff notes describe intent but are not code.
 - The GitHub repository name is Drawing Tools+, while the existing Foundry module ID is `foundry-drawing-quickbar`. Preserve module identity and its flags and settings.
-- `module.json` includes repository `url` but deliberately omits `manifest`/`download` until a real GitHub release artifact exists; do not advertise a broken install URL.
-- `.github/workflows/validate.yml` tests the source on changes and builds a ZIP artifact. A separate tag-triggered workflow creates a **prerelease**, only after a tag is manually created. Verify actual run results; do not assume CI succeeded from the presence of workflow YAML.
-- No license selection or official Foundry submission is claimed. Before inviting public forks or Foundry package publication, select a suitable code license and review Foundry's policies for AI-assisted work and dependencies.
+- `module.json` includes stable manifest `https://raw.githubusercontent.com/rebsiot/drawing-tools-plus/main/module.json` and version-pinned GitHub release `download`. Each subsequent release must bump `version` and change the pinned download URL; preserve the stable manifest URL.
+- `.github/workflows/validate.yml` tests source on changes and builds a ZIP artifact. The prerelease workflow can be triggered by matching `vX.Y.Z` tag or `beta/vX.Y.Z` branch; it publishes an immutable versioned release ZIP and manifest asset. Verify actual run results and URLs after triggering.
+- License: `LICENSE.md`, **Personal Use Only (No Redistribution)**, source-available proprietary software matching the restrictive rebsiot module licenses. GitHub beta publication is not Foundry's official directory approval; review AI policy and human-authored prepared-content requirements before official submission.
 - Source contains no TC Modern licensed artwork, characters, campaign information, Patreon credentials, or server configuration.
 
 ## First live Foundry v14 smoke test (stop at first failure)
@@ -40,7 +40,7 @@ The current module has native selection/freehand/rectangle/ellipse/polygon/text 
 
 ## Install/rollback and safety
 
-- Back up the world. Stop Foundry; unzip so `Z:\Data\modules\foundry-drawing-quickbar\module.json` is directly inside the module folder, restart, enable in a test world and hard refresh.
+- Back up the world. Prefer Foundry Setup's Install Module via the stable manifest URL. For manual ZIP installation, stop Foundry and extract the ZIP contents directly into `Z:\Data\modules\foundry-drawing-quickbar\` so `module.json` is immediately inside the folder; restart, enable in a test world and hard refresh.
 - Disable the module to stop its UI; native Drawings created in a scene persist. A module rollback cannot undo edits made to Scene Drawing documents; use the matching world snapshot if needed.
 - Do not modify Foundry core, WoD20, other modules, or import/update Scenes/Actors automatically.
 

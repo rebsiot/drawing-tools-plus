@@ -34,6 +34,13 @@ No live Foundry server, client, PIXI renderer, Scene, WoD20 game, or saved world
 
 Follow **step 1 only** in `README.md` first: create one colored rectangle on an expendable Scene and verify it remains selectable and movable. If it fails, provide the Foundry build number and first console error; investigate before attempting any additional features.
 
+## Beta packaging and manifest verification (2026-10-16)
+
+- The original 11 unit/mock tests remain; an additional release metadata test checks ID, stable manifest, version-pinned download, compatibility claims and restrictive license.
+- GitHub Actions validates JavaScript syntax, runs Node tests, builds an installer ZIP with `module.json` at ZIP root and checks its content.
+- Runtime JS unchanged from the v0.1.0 baseline. GitHub beta publication does not establish successful installation or gameplay behavior in live Foundry v14.
+- See the GitHub Actions run and prerelease assets for the actual results of the new packaging workflow.
+
 ## GitHub import verification (2026-10-16)
 
 - Baseline source ZIP inspected and extracted without missing files.

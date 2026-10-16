@@ -18,5 +18,11 @@
   "styles": [
     "styles/quickbar.css"
   ],
-  "url": "https://github.com/rebsiot/drawing-tools-plus"
+  "url": "https://github.com/rebsiot/drawing-tools-plus",
+  "manifest": "https://raw.githubusercontent.com/rebsiot/drawing-tools-plus/main/module.json",
+  "download": "https://github.com/rebsiot/drawing-tools-plus/releases/download/v0.1.0/foundry-drawing-quickbar-0.1.0.zip",
+  "license": "LICENSE.md",
+  "readme": "README.md",
+  "bugs": "https://github.com/rebsiot/drawing-tools-plus/issues",
+  "changelog": "CHANGELOG.md"
 }

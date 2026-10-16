@@ -1,6 +1,13 @@
-# Drawing Tools+ / Drawing Quickbar - v0.1.0 (2026-10-16)
+# Drawing Tools+ / Drawing Quickbar - v0.1.0 beta (2026-10-16)
 
 Project repository: https://github.com/rebsiot/drawing-tools-plus
+
+**Beta release:** https://github.com/rebsiot/drawing-tools-plus/releases/tag/v0.1.0
+
+**Permanent Foundry install/update manifest:**
+`https://raw.githubusercontent.com/rebsiot/drawing-tools-plus/main/module.json`
+
+**License:** [Personal Use Only (No Redistribution)](LICENSE.md). Free personal/non-commercial use; no redistribution or resale without written permission.
 
 A **system-independent Foundry VTT v14 beta** for making the existing **Drawings** layer less cumbersome. This is not a wall-building tool, nor does it replace Foundry's Drawing documents, native drawing editor, scene persistence, selection, or normal deletion.
 
@@ -25,16 +32,19 @@ Selection, moving, resizing, native Drawing configuration, Ctrl+Z, and shape cre
 - No game system dependency; WoD20 is not required.
 - No third-party drawing editor, CDN, images, accounts, or credentials.
 
-## Install (test world first)
+## Install from the Foundry manifest (test world first)
 
-1. Make a **world snapshot** or back up the relevant world data. The beta can create/modify Scene Drawing documents when you choose its controls.
-2. Stop the Foundry application on Ubuntu before copying through Samba.
-3. Extract the ZIP into your Foundry modules folder so this exact file exists:
-   `Z:\Data\modules\foundry-drawing-quickbar\module.json`
-   (The mapped `Z:` is the user-data root; `Z:\Data` is the real Foundry Data folder.)
-4. Restart Foundry, open a **test world**, and enable **Drawing Quickbar** under Manage Modules.
-5. Hard-refresh the browser (`Ctrl+Shift+R`). On a Scene, select the pencil **Drawings** controls; click the palette icon labeled **Drawing Quickbar**.
-6. Test creation on an expendable Scene before using production content.
+1. Make a **world snapshot** or back up the relevant world data. This beta creates/modifies native Scene Drawing documents only when you use its controls.
+2. In Foundry Setup, open **Add-on Modules > Install Module**.
+3. Paste the permanent **Manifest URL** above into the Manifest URL field and click **Install**. Foundry fetches the version-pinned ZIP from the manifest.
+4. Enter a disposable **test world**, open **Manage Modules**, and enable **Drawing Quickbar**.
+5. Hard-refresh the browser (`Ctrl+Shift+R`). On a Scene, select the **Drawings** controls and open the **Drawing Quickbar** palette button.
+6. Use the smoke test below. No live v14 compatibility claim has been made.
+
+**Manual install alternative:** Stop Foundry before copying files through Samba. Extract the **contents of the release ZIP directly into**
+`Z:\Data\modules\foundry-drawing-quickbar\` so `module.json` exists immediately inside that folder (not one directory lower). Restart Foundry, enable the module in your test world and hard-refresh.
+
+**Updating:** Use Foundry Setup's **Check Update** / **Update** for this installed module. Its `manifest` URL stays stable, while each published `version` links to its matching immutable release ZIP. Before upgrading, retain a world snapshot and the previous installed module directory.
 
 ## First smoke test (send this result back)
 
@@ -67,8 +77,8 @@ If step 1 fails, **stop testing and report the Foundry v14 build number and firs
 - The Arrow tool is experimental pending a real v14 test: canvas-to-Scene coordinate conversion, arrowhead sizing under zoom, and Drawing geometry validity are unverified live.
 - Styling of preexisting Drawings is deliberately manual. It does not bulk migrate any world or Scene data.
 - Not yet a full Excalidraw-style editor: no multi-object alignment, text editing in place, snapping enhancements, or generalized history panel.
-- Source is maintained at https://github.com/rebsiot/drawing-tools-plus. This beta has no published GitHub Release or working remote auto-update manifest yet. The GitHub tag workflow can package a pre-release after testing; source on GitHub does not by itself mean the module has been submitted to Foundry.
-- No public license has been selected. Do not assume public source visibility grants redistribution rights.
+- Source is maintained at https://github.com/rebsiot/drawing-tools-plus, with beta release ZIPs and an install/update manifest. This **GitHub beta is not listed in Foundry's official package directory**.
+- Software is distributed under the [Personal Use Only (No Redistribution)](LICENSE.md) source-available proprietary license. Public GitHub visibility does not authorize redistribution.
 
 ## Development / source
 
@@ -78,6 +88,6 @@ If step 1 fails, **stop testing and report the Foundry v14 build number and firs
 - `tests/*.test.mjs`: Node mock/unit tests (`npm test`, Node 18+).
 - `docs/TEST-REPORT.md`: automated vs. live evidence.
 - `docs/16-DRAWING-TOOLS-PLUS-HANDOFF.md`: current next-chat handoff and pending integration checks.
-- `tools/build_release.py` and `.github/workflows/`: versioned package generation, CI and optional GitHub prerelease from a manually pushed tag.
+- `tools/build_release.py` and `.github/workflows/`: versioned root-layout Foundry installer ZIP, CI and prerelease automation. A release can be created by a matching tag or dedicated `beta/vX.Y.Z` branch.
 
 See `CHANGELOG.md` for version-specific notes. No files in Foundry core, game systems, other modules, Actors, Tiles, Journals or Walls are modified on install.
