@@ -11,11 +11,14 @@ export const DEFAULT_PREFS = Object.freeze({
   fontSize: 32,
   autoStyle: true,
   arrowEnds: "end",
+  arrowHeadShape: "triangle",
   position: null
 });
 
 export const ARROW_END_OPTIONS = Object.freeze(["end", "start", "both", "none"]);
+export const ARROW_HEAD_SHAPES = Object.freeze(["triangle", "diamond", "chevron"]);
 const normalizeArrowEnds = ends => ARROW_END_OPTIONS.includes(ends) ? ends : "end";
+const normalizeArrowHeadShape = shape => ARROW_HEAD_SHAPES.includes(shape) ? shape : "triangle";
 const STYLABLE = ["strokeColor", "strokeWidth", "strokeAlpha", "fillType", "fillColor", "fillAlpha", "textColor", "fontSize"];
 const HEX_COLOR = /^#[\da-fA-F]{6}$/;
 const clamp = (value, lower, upper, fallback) => {
@@ -39,6 +42,7 @@ export function normalizePrefs(source = {}) {
     fontSize: Math.round(clamp(source.fontSize, 8, 120, d.fontSize)),
     autoStyle: typeof source.autoStyle === "boolean" ? source.autoStyle : d.autoStyle,
     arrowEnds: normalizeArrowEnds(source.arrowEnds),
+    arrowHeadShape: normalizeArrowHeadShape(source.arrowHeadShape),
     position: position && Number.isFinite(position.left) && Number.isFinite(position.top)
       ? {left: position.left, top: position.top} : null
   };
@@ -75,11 +79,12 @@ export function snapshotStyle(document) {
 }
 
 /**
- * Polygon silhouette for a single native v14 Drawing.
- * Modes: end (default), start, both, none. No composite docs or separate engine.
- * The first/last shape is intentionally closed for a filled arrow shaft.
+ * A closed, filled polygon for one native Foundry v14 Drawing.
+ * 'ends' controls where arrowheads appear. 'headShape' controls their silhouette.
+ * The original end-only triangle retains its seven vertices unchanged.
  */
-export function arrowPoints(start, end, head = 18, shaftWidth = 4, ends = "end") {
+export function arrowPoints(start, end, head = 18, shaftWidth = 4,
+    ends = "end", headShape = "triangle") {
   if (![start?.x, start?.y, end?.x, end?.y, head, shaftWidth].every(Number.isFinite)) return null;
   if (head <= 0 || shaftWidth <= 0) return null;
   const dx = end.x - start.x, dy = end.y - start.y;
@@ -87,31 +92,64 @@ export function arrowPoints(start, end, head = 18, shaftWidth = 4, ends = "end")
   if (!Number.isFinite(distance) || distance < 2) return null;
   const startHead = ends === "start" || ends === "both";
   const endHead = ends !== "none" && ends !== "start";
+  const shape = normalizeArrowHeadShape(headShape);
   const ux = dx / distance, uy = dy / distance;
   const px = -uy, py = ux;
   const length = Math.min(Math.max(2, head), distance * 0.45);
   const halfShaft = Math.min(Math.max(0.5, shaftWidth / 2), length * 0.28);
   const halfHead = Math.min(Math.max(halfShaft * 2.4, length * 0.48), distance * 0.3);
-  const baseStart = {x: start.x + ux * length, y: start.y + uy * length};
-  const baseEnd = {x: end.x - ux * length, y: end.y - uy * length};
+  const offset = (origin, distanceAlong) => ({
+    x: origin.x + ux * distanceAlong,
+    y: origin.y + uy * distanceAlong
+  });
+  const baseStart = offset(start, length);
+  const baseEnd = offset(end, -length);
   const point = (origin, side) => ({x: origin.x + px * side, y: origin.y + py * side});
   const vertices = [];
-  if (startHead) {
+
+  // Upper outline from starting end to the shaft.
+  if (!startHead) vertices.push(point(start, halfShaft));
+  else if (shape === "triangle")
     vertices.push({x: start.x, y: start.y}, point(baseStart, halfHead), point(baseStart, halfShaft));
-  } else vertices.push(point(start, halfShaft));
-  if (endHead) {
+  else if (shape === "diamond")
+    vertices.push({x: start.x, y: start.y}, point(offset(start, length * .52), halfHead),
+      point(baseStart, halfShaft));
+  else vertices.push({x: start.x, y: start.y},
+    point(offset(start, length * .33), halfHead * .35),
+    point(baseStart, halfHead), point(baseStart, halfShaft));
+
+  // Upper end outline, followed by lower end outline.
+  if (!endHead) vertices.push(point(end, halfShaft), point(end, -halfShaft));
+  else if (shape === "triangle")
     vertices.push(point(baseEnd, halfShaft), point(baseEnd, halfHead),
       {x: end.x, y: end.y}, point(baseEnd, -halfHead), point(baseEnd, -halfShaft));
-  } else vertices.push(point(end, halfShaft), point(end, -halfShaft));
-  if (startHead) {
+  else if (shape === "diamond")
+    vertices.push(point(baseEnd, halfShaft),
+      point(offset(end, -length * .52), halfHead),
+      {x: end.x, y: end.y},
+      point(offset(end, -length * .52), -halfHead),
+      point(baseEnd, -halfShaft));
+  else vertices.push(point(baseEnd, halfShaft), point(baseEnd, halfHead),
+    point(offset(end, -length * .33), halfHead * .35),
+    {x: end.x, y: end.y},
+    point(offset(end, -length * .33), -halfHead * .35),
+    point(baseEnd, -halfHead), point(baseEnd, -halfShaft));
+
+  // Lower outline from the shaft back to the starting end.
+  if (!startHead) vertices.push(point(start, -halfShaft));
+  else if (shape === "triangle")
     vertices.push(point(baseStart, -halfShaft), point(baseStart, -halfHead));
-  } else vertices.push(point(start, -halfShaft));
+  else if (shape === "diamond")
+    vertices.push(point(baseStart, -halfShaft), point(offset(start, length * .52), -halfHead));
+  else vertices.push(point(baseStart, -halfShaft), point(baseStart, -halfHead),
+    point(offset(start, length * .33), -halfHead * .35));
   return vertices;
 }
 
 export function arrowDocumentData(start, end, prefs) {
   const p = normalizePrefs(prefs);
-  const points = arrowPoints(start, end, Math.max(14, p.strokeWidth * 5), p.strokeWidth, p.arrowEnds);
+  const points = arrowPoints(start, end, Math.max(14, p.strokeWidth * 5), p.strokeWidth,
+    p.arrowEnds, p.arrowHeadShape);
   if (!points) return null;
   const xs = points.map(point => point.x);
   const ys = points.map(point => point.y);
@@ -131,7 +169,9 @@ export function arrowDocumentData(start, end, prefs) {
     fillAlpha: Math.max(0.3, p.strokeAlpha),
     strokeWidth: 0,
     strokeAlpha: 0,
-    flags: {[MODULE_ID]: {kind: "arrow", ends: p.arrowEnds, version: 2}}
+    flags: {[MODULE_ID]: {
+      kind: "arrow", ends: p.arrowEnds, headShape: p.arrowHeadShape, version: 3
+    }}
   };
 }
 

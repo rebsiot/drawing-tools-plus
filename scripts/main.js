@@ -61,6 +61,7 @@ function renderStyleInputs() {
   dock.querySelector('[name="filled"]').checked = style.filled;
   dock.querySelector('[name="autoStyle"]').checked = preferences.autoStyle;
   dock.querySelector('[name="arrowEnds"]').value = preferences.arrowEnds;
+  dock.querySelector('[name="arrowHeadShape"]').value = preferences.arrowHeadShape;
   const selected = selectedDrawingObjects();
   const selectedArrow = selected.length === 1 && isQuickbarArrow(selected[0]?.document);
   const width = dock.querySelector('[name="strokeWidth"]');
@@ -155,6 +156,9 @@ function refreshToolHighlight() {
     button.classList.toggle("active", selected);
     button.setAttribute("aria-pressed", String(selected));
   }
+  // Do not show options for a selected existing arrow or a non-Arrow tool.
+  const options = dock.querySelector(".dqb-arrow-options");
+  if (options) options.hidden = active !== "arrow";
 }
 function dragHeader(root) {
   const header = root.querySelector(".dqb-header");
@@ -188,7 +192,7 @@ function createDock() {
   root.setAttribute("aria-label", "Drawing Quickbar");
   root.innerHTML = `
     <div class="dqb-header">
-      <span><i class="fa-solid fa-pen-ruler" aria-hidden="true"></i> Drawing Quickbar <small>v0.1.8</small></span>
+      <span><i class="fa-solid fa-pen-ruler" aria-hidden="true"></i> Drawing Quickbar <small>v0.1.9</small></span>
       <button type="button" class="dqb-icon" data-action="close" aria-label="Close Drawing Quickbar" title="Close"><i class="fa-solid fa-xmark"></i></button>
     </div>
     <div class="dqb-content">
@@ -201,15 +205,24 @@ function createDock() {
         <button type="button" data-tool="text" title="Text (T)"><i class="fa-solid fa-font"></i><span>Text</span></button>
         <button type="button" data-tool="arrow" title="Draw an arrow by dragging (A)"><i class="fa-solid fa-arrow-right-long"></i><span>Arrow</span></button>
       </div>
-      <div class="dqb-arrow-options">
+      <div class="dqb-arrow-options" hidden>
+        <div class="dqb-section-title">ARROW OPTIONS</div>
         <label>Arrow ends
-          <select name="arrowEnds" aria-label="Arrowhead placement for new arrows">
+          <select name="arrowEnds" aria-label="Which ends have arrowheads">
             <option value="end">End only (default)</option>
             <option value="start">Start only</option>
             <option value="both">Both ends</option>
             <option value="none">No arrowheads</option>
           </select>
         </label>
+        <label>Arrowhead shape
+          <select name="arrowHeadShape" aria-label="Arrowhead shape for new arrows">
+            <option value="triangle">Filled triangle (default)</option>
+            <option value="diamond">Diamond</option>
+            <option value="chevron">Chevron</option>
+          </select>
+        </label>
+        <small>These options apply to the next arrow, not existing Drawings.</small>
       </div>
       <section class="dqb-selection" aria-label="Selected drawings">
         <div class="dqb-section-title">SELECTED DRAWINGS <strong data-value="selected-count">0</strong></div>
@@ -257,7 +270,7 @@ function createDock() {
       </div>
       <label class="dqb-option"><input name="autoStyle" type="checkbox"> Apply my default style to new Drawings</label>
 
-      <div class="dqb-help">Deselect clears selection only. Delete asks before removing one unlocked Drawing. Arrow ends controls new arrows. Undo Style Change only reverts appearance.</div>
+      <div class="dqb-help">Deselect clears selection only. Delete confirms before removing one unlocked Drawing. Arrowhead choices appear while Arrow is active. Undo Style Change only restores appearance.</div>
     </div>`;
   document.body.append(root);
   const left = preferences.position?.left ?? 112;
@@ -304,8 +317,9 @@ function createDock() {
   });
   root.addEventListener("change", event => {
     const field = event.target;
-    if (!(field instanceof HTMLSelectElement) || field.name !== "arrowEnds") return;
-    preferences = normalizePrefs({...preferences, arrowEnds: field.value});
+    if (!(field instanceof HTMLSelectElement) ||
+        !["arrowEnds", "arrowHeadShape"].includes(field.name)) return;
+    preferences = normalizePrefs({...preferences, [field.name]: field.value});
     safeSave();
     renderStyleInputs();
   });
@@ -664,15 +678,17 @@ async function deleteOneDrawing(id) {
   const doc = scene.drawings.get(id);
   if (!doc) return notify("Drawing no longer exists.");
   if (doc.locked) return notify("Locked Drawings must be explicitly unlocked before deletion.");
-  const confirm = foundry?.applications?.api?.DialogV2?.confirm;
-  if (typeof confirm !== "function")
+  // The static confirm() method calls this.wait() internally in Foundry v14.
+  // Never detach it from DialogV2: an unbound call throws "undefined.wait".
+  const DialogV2 = foundry?.applications?.api?.DialogV2;
+  if (typeof DialogV2?.confirm !== "function")
     return notify("Native confirmation is unavailable; nothing was deleted.", "error");
   const html = value => String(value).replace(/[&<>"']/g,
     character => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[character]));
   const label = (doc.text?.trim() || drawingLabel(doc).name).slice(0, 90);
   let approved;
   try {
-    approved = await confirm({
+    approved = await DialogV2.confirm({
       window: {title: "Delete Drawing?"},
       content: `<p>Delete <strong>${html(label)}</strong> (${html(drawingLabel(doc).kind)})?</p>
         <p>Drawing ID: <code>${html(id)}</code></p>
@@ -873,7 +889,8 @@ function drawArrowPreview(point) {
   const path = arrowOverlay?.querySelector("path");
   if (!path || !arrowStart) return;
   const points = arrowPoints(arrowStart.screen, point,
-    Math.max(14, preferences.strokeWidth * 5), preferences.strokeWidth, preferences.arrowEnds);
+    Math.max(14, preferences.strokeWidth * 5), preferences.strokeWidth,
+    preferences.arrowEnds, preferences.arrowHeadShape);
   path.setAttribute("d", points ? points.map((p, i) => `${i ? "L" : "M"}${p.x.toFixed(1)},${p.y.toFixed(1)}`).join(" ") + " Z" : "");
   path.setAttribute("fill", preferences.strokeColor);
   path.setAttribute("stroke", "none");
@@ -1207,5 +1224,5 @@ Hooks.once("ready", () => {
     // A tool switch or Scene navigation should never leave an invisible input shield over the canvas.
     if (arrowOverlay && !arrowOverlay.contains(event.target) && !dock?.contains(event.target) && !canvas?.drawings?.active) exitArrow();
   });
-  console.info(`${MODULE_ID} | v0.1.8 ready (Foundry v14 native Drawing workflow)`);
+  console.info(`${MODULE_ID} | v0.1.9 ready (Foundry v14 native Drawing workflow)`);
 });

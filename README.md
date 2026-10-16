@@ -1,4 +1,4 @@
-# Drawing Tools+ — v0.1.8 Beta
+# Drawing Tools+ — v0.1.9 Beta
 
 **Foundry VTT:** v14 · **Module ID:** foundry-drawing-quickbar · **License:** [Personal Use Only (No Redistribution)](LICENSE.md)
 
@@ -14,8 +14,8 @@ A compact drawing toolbar built on Foundry's native Scene Drawings. No separate 
 - **All Drawings list:** Expand **All Drawings (count)** beneath **Locked Drawings** to see a searchable inventory of every Drawing on the current Scene, including locked and hidden items. Use **Locate**, **Select** (or **Unlock**), or **Text** on an individual result. Large Scenes offer **Show More** to reach every item. Just opening or searching the list does not change your map.
 - **Launch from Tokens or Drawings:** GMs see the **Drawing Quickbar** palette button in both Foundry control menus. Opening it from **Tokens** keeps your Token controls and selection in place. Choosing a shape/Arrow/Text switches to the native Drawings layer. From All Drawings, **Locate** and **Unlock** work without switching layers; **Select** and **Text** switch to Drawings only when clicked. There is only one Quickbar window, not two independent toolbars.
 - **Protect permanent art:** Lock selected Drawings, then recover them using the Locked Drawings list. Existing artwork is never locked automatically.
-- **Arrow ends:** Before drawing an arrow, choose **End**, **Start**, **Both**, or **None** for its arrowheads. It remains one native polygon Drawing. Its thickness is set when drawn; existing arrows can be moved/resized with native controls.
-- **Deselect versus Delete:** **Deselect** only removes an item from the current selection. **Delete** is a separate red action in Selected Drawings and All Drawings. It requires a native confirmation showing the target Drawing ID. Locked Drawings cannot be deleted through this feature.
+- **Arrow options only when drawing arrows:** Choose the **Arrow** tool to reveal its options. Pick where arrowheads go—**End**, **Start**, **Both**, or **None**—and their filled silhouette: **Triangle**, **Diamond**, or **Chevron**. Both choices are saved in your local preferences for the next arrow. A completed arrow remains one native polygon Drawing, with no conversion of existing arrows. Thickness is set before drawing.
+- **Deselect versus Delete:** **Deselect** only clears selection. **Delete** is a separate red action in Selected Drawings and All Drawings. The v0.1.9 fix correctly binds Foundry's native confirmation method, displaying the exact Drawing ID. Cancel does nothing, and locked Drawings cannot be deleted through the Quickbar.
 - **Undo Style Change:** Replaces the confusing Revert Style label. It restores the last Quickbar appearance change, not movement, text, or deletions. Native Foundry undo is separate.
 - **Other controls:** Arrow, Duplicate, native Properties, and tool keyboard shortcuts outside text-entry fields.
 
@@ -25,7 +25,7 @@ The permanent Foundry Manifest URL is:
 
 https://raw.githubusercontent.com/rebsiot/drawing-tools-plus/main/module.json
 
-In **Foundry Setup → Add-on Modules**, install using this URL or use **Check Update → Update** on Drawing Quickbar. The full ZIP is also in the [v0.1.8 GitHub release](https://github.com/rebsiot/drawing-tools-plus/releases/tag/v0.1.8).
+In **Foundry Setup → Add-on Modules**, install using this URL or use **Check Update → Update** on Drawing Quickbar. The full ZIP is also in the [v0.1.9 GitHub release](https://github.com/rebsiot/drawing-tools-plus/releases/tag/v0.1.9).
 
 **Back up your world before testing.** For a manual ZIP install, stop Foundry and extract the release archive contents directly into Z:\Data\modules\foundry-drawing-quickbar\ so module.json is at the top level. Restart Foundry, enable the module in a disposable test world and refresh the browser.
 
@@ -38,10 +38,10 @@ In **Foundry Setup → Add-on Modules**, install using this URL or use **Check U
 5. Return to the **Drawings** controls and use its **Drawing Quickbar** launcher to close/reopen the **same** window. Check no duplicate palette appears.
 6. Select one disposable Drawing and press **Deselect**. Verify the Drawing remains at exactly the same position/size. Select it again and choose **Delete**, then **Cancel**: no data should change. Choose Delete and confirm only that single Drawing disappears.
 7. Lock a disposable Drawing, verify it has no Delete action; unlock it later from Locked Drawings.
-8. Draw short arrows using **End**, **Start**, **Both**, and **None** at two zoom levels. Verify one Drawing is saved for each, the preview matches, and each remains after reload. Apply an Outline style to an arrow; its silhouette should remain visible.
+8. Confirm **Arrow options** are hidden while using Circle, Box, Text and Select, and appear only when Arrow is active. Try **Triangle**, **Diamond**, and **Chevron** with different end placements, including both ends, at two zoom levels. Confirm the preview, one native Drawing per arrow and persistence after reload. Apply Outline to an arrow and verify it remains visible.
 9. Change a test Drawing's appearance and use **Undo Style Change**. Verify appearance is restored but position and text are unchanged.
 
-If something fails, record the actual Foundry build and the **first browser console error**. The v0.1.8 deletion and arrow-end choices have automated/mock coverage but have **not yet been live verified**.
+If something fails, record the actual Foundry build and the **first browser console error**. The v0.1.9 confirmation fix and arrow shape/visibility controls have automated/mock coverage but have **not yet been live verified**.
 
 ## Known limits and safety
 
@@ -50,6 +50,6 @@ If something fails, record the actual Foundry build and the **first browser cons
 - Protected background/working groups, advanced snapping, connectors and broader undo are planned, not implemented.
 - The toolbar is GM-only in this beta. This GitHub release has **not** been approved for Foundry's official package directory.
 
-Disabling the module does **not** erase native Scene Drawings. To roll back code, install the [v0.1.7 release](https://github.com/rebsiot/drawing-tools-plus/releases/tag/v0.1.7). Reverting module files does not reverse saved Scene edits; retain your world backup for that.
+Disabling the module does **not** erase native Scene Drawings. To roll back code, install the [v0.1.8 release](https://github.com/rebsiot/drawing-tools-plus/releases/tag/v0.1.8). Reverting module files does not reverse saved Scene edits; retain your world backup for that.
 
-[Readable Changelog](CHANGELOG.md) · [Release Notes](docs/releases/v0.1.8.md) · [Tests](docs/TEST-REPORT.md) · [Handoff](docs/16-DRAWING-TOOLS-PLUS-HANDOFF.md)
+[Readable Changelog](CHANGELOG.md) · [Release Notes](docs/releases/v0.1.9.md) · [Tests](docs/TEST-REPORT.md) · [Handoff](docs/16-DRAWING-TOOLS-PLUS-HANDOFF.md)

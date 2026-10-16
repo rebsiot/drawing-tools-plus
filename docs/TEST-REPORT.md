@@ -1,6 +1,13 @@
-# Test Report — Drawing Quickbar v0.1.8
+# Test Report — Drawing Quickbar v0.1.9
 
 **Date:** 2026-10-16
+
+## v0.1.9 — Delete confirmation fix and contextual arrow options (2026-10-16)
+
+**Bug reproduced by user:** `DialogV2.confirm` throws an `undefined.wait` TypeError in v0.1.8 before opening the confirmation prompt. Direct class invocation restores the expected `this` receiver, per the Foundry v14 API.
+**Automated regression checks:** Source assertion forbids detached `confirm` invocation, requires `DialogV2.confirm` with receiver; Arrow panel is initially hidden and controlled by Arrow overlay state; validates shape options and normalization; checks native polygon model output across shape/end modes and multiple directions; release metadata and ZIP integrity.
+**Safety:** No deletion without confirmed positive response; existing GM/Scene/document/locked checks remain. Native Drawings and existing arrows are not altered on installation.
+**Pending real Foundry verification:** Confirm/cancel modal UI, exact Drawing deletion and retained locked gridlines, Arrow-only options, head style preview and persistence.
 
 ## v0.1.8 — Drawing Delete and Arrow endpoints (2026-10-16)
 

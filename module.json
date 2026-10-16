@@ -3,7 +3,7 @@
   "type": "module",
   "title": "Drawing Quickbar",
   "description": "A compact, system-independent drawing toolbar with remembered styles, native shape shortcuts, selected-drawing styling, and a quick arrow tool for Foundry v14.",
-  "version": "0.1.8",
+  "version": "0.1.9",
   "authors": [
     {
       "name": "St. Louis v2 Tools"
@@ -20,7 +20,7 @@
   ],
   "url": "https://github.com/rebsiot/drawing-tools-plus",
   "manifest": "https://raw.githubusercontent.com/rebsiot/drawing-tools-plus/main/module.json",
-  "download": "https://github.com/rebsiot/drawing-tools-plus/releases/download/v0.1.8/foundry-drawing-quickbar-0.1.8.zip",
+  "download": "https://github.com/rebsiot/drawing-tools-plus/releases/download/v0.1.9/foundry-drawing-quickbar-0.1.9.zip",
   "license": "LICENSE.md",
   "readme": "README.md",
   "bugs": "https://github.com/rebsiot/drawing-tools-plus/issues",

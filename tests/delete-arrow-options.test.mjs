@@ -9,6 +9,10 @@ test('Remove was just Deselect; permanent Delete has separate confirmation and s
   assert.match(s,/button\.dataset\.action === "delete-one"\) await deleteOneDrawing/);
   assert.match(s,/function deleteOneDrawing\(id\)/);
   assert.match(s,/DialogV2\?\.confirm/);
+  assert.match(s,/approved = await DialogV2\.confirm\(\{/,
+    "Confirm must retain the DialogV2 class receiver for its internal this.wait()");
+  assert.doesNotMatch(s,/const confirm = foundry\?\.applications\?\.api\?\.DialogV2\?\.confirm/,
+    "Never detach the class method: this.wait would throw");
   assert.match(s,/deleteEmbeddedDocuments\("Drawing", \[id\]\)/);
   assert.match(s,/if \(doc\.locked\) return notify/);
   assert.match(s,/approved !== true/);
@@ -25,4 +29,16 @@ test('arrow end options use same preview geometry as one saved native polygon', 
   assert.match(s,/preferences\.strokeWidth, preferences\.arrowEnds\)/);
   assert.match(s,/visibleArrowStylePatch\(selectedDrawingObjects\(\)\[0\]\?\.document, editingStyle\)/);
   assert.match(s,/visibleArrowStylePatch\(d, preferences\)/);
+});
+
+test('arrowhead panel stays collapsed outside active Arrow mode', async () => {
+  const s=await readFile(new URL("../scripts/main.js",import.meta.url),"utf8");
+  assert.match(s,/<div class="dqb-arrow-options" hidden>/);
+  assert.match(s,/if \(options\) options\.hidden = active !== "arrow"/);
+  assert.match(s,/<select name="arrowHeadShape"/);
+  for(const shape of ['triangle','diamond','chevron'])
+    assert.ok(s.includes(`<option value="${shape}">`));
+  assert.match(s,/\["arrowEnds", "arrowHeadShape"\]\.includes\(field\.name\)/);
+  assert.match(s,/preferences\.arrowEnds, preferences\.arrowHeadShape\)/,
+    "On-canvas arrow preview must honor both dropdowns");
 });

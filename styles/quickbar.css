@@ -264,3 +264,19 @@
 #foundry-drawing-quickbar .dqb-fields input:disabled {
   opacity:.48; cursor:not-allowed;
 }
+
+/* Arrow placement and head-shape selectors only appear during Arrow creation. */
+#foundry-drawing-quickbar .dqb-arrow-options[hidden] { display: none; }
+#foundry-drawing-quickbar .dqb-arrow-options {
+  border: 1px solid #586373; border-radius: 5px;
+  margin: 8px 0 4px; padding: 7px 9px;
+  background: #28313d;
+}
+#foundry-drawing-quickbar .dqb-arrow-options .dqb-section-title {
+  margin: 0 0 7px;
+}
+#foundry-drawing-quickbar .dqb-arrow-options label + label { margin-top: 7px; }
+#foundry-drawing-quickbar .dqb-arrow-options small {
+  display: block; color: #bcc8d5; font-size: 10px;
+  line-height: 1.3; margin-top: 7px;
+}

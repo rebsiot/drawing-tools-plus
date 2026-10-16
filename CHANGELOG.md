@@ -2,6 +2,13 @@
 
 Short summaries of changes you can see in Foundry. See the [test report](docs/TEST-REPORT.md) for technical verification.
 
+## v0.1.9 — Delete Confirmation and Arrowhead Shapes
+- **Fixed:** Delete confirmation no longer errors with `Cannot read properties of undefined (reading 'wait')`; the Foundry v14 dialog method is called with its required class context.
+- **Improved:** Arrow options are hidden until the **Arrow** tool is active; they disappear when switching tools or selecting a completed arrow.
+- **New:** Three filled arrowhead shapes: **Triangle**, **Diamond**, and **Chevron**. Combine with Start/End/Both/None placement. All remain one native Drawing per arrow.
+- **Preserved:** Existing arrow geometry/flags, Scene IDs, locks, and data. Confirmation still deletes only one explicitly selected unlocked Drawing.
+- **Testing:** Static/mock/Node tests and release ZIP verification; requires live Foundry v14 confirmation.
+
 ## v0.1.8 — Clear Deletion, Arrow Ends, and Appearance Undo
 - **Clarified:** The old **Remove** button was actually Deselect. It is now labeled **Deselect** and never changes a Drawing's geometry or visibility.
 - **New:** **Delete** permanently removes exactly one unlocked native Drawing, but only after a Foundry confirmation identifying that object; no automatic bulk deletion.

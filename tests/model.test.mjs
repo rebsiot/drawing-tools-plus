@@ -1,7 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import {
-  MODULE_ID, DEFAULT_PREFS, ARROW_END_OPTIONS, normalizePrefs, stylePatch,
+  MODULE_ID, DEFAULT_PREFS, ARROW_END_OPTIONS, ARROW_HEAD_SHAPES, normalizePrefs, stylePatch,
   arrowPoints, arrowDocumentData, duplicateDrawingData, textDocumentData, drawingLabel,
   drawingCenter, editTextPatch, findSceneDrawings,
   stylePreferencesFromDrawing, singleStylePatch, styleTargetMode,
@@ -312,4 +312,54 @@ test('arrow remains visible when selected styles turn fill off or change stroke 
   assert.ok(faded.fillAlpha>=.3,'Arrow never becomes transparent by quickbar styling');
   assert.deepEqual(visibleArrowStylePatch({shape:{type:'r'}},{...DEFAULT_PREFS,filled:false}),stylePatch(DEFAULT_PREFS));
   assert.equal(isQuickbarArrow({flags:{}}),false);
+});
+
+test('arrowhead shapes validate browser preferences and default to classic triangle', () => {
+  assert.deepEqual(ARROW_HEAD_SHAPES, ['triangle', 'diamond', 'chevron']);
+  assert.equal(normalizePrefs({arrowHeadShape:'diamond'}).arrowHeadShape,'diamond');
+  assert.equal(normalizePrefs({arrowHeadShape:'chevron'}).arrowHeadShape,'chevron');
+  assert.equal(normalizePrefs({arrowHeadShape:'garbage'}).arrowHeadShape,'triangle');
+  assert.equal(normalizePrefs({}).arrowHeadShape,'triangle');
+});
+test('all arrow placements accept each head shape while preserving one native Drawing', () => {
+  const directions = [
+    [{x:15,y:20},{x:170,y:20}],
+    [{x:150,y:100},{x:20,y:20}],
+    [{x:0,y:0},{x:0,y:190}]
+  ];
+  for (const [start,end] of directions) {
+    for(const ends of ARROW_END_OPTIONS){
+      for(const shape of ARROW_HEAD_SHAPES){
+        const options={...DEFAULT_PREFS,arrowEnds:ends,arrowHeadShape:shape};
+        const polygon=arrowPoints(start,end,22,5,ends,shape);
+        assert.ok(Array.isArray(polygon)&&polygon.length>=4,`${ends} ${shape}`);
+        assert.ok(polygon.every(v=>Number.isFinite(v.x)&&Number.isFinite(v.y)));
+        const doc=arrowDocumentData(start,end,options);
+        assert.equal(doc.shape.type,'p');
+        assert.equal(doc.shape.points.length,polygon.length*2);
+        assert.ok(doc.shape.width>0&&doc.shape.height>0);
+        assert.equal(doc.flags[MODULE_ID].ends,ends);
+        assert.equal(doc.flags[MODULE_ID].headShape,shape);
+        assert.equal(doc.flags[MODULE_ID].version,3);
+        assert.equal(doc.strokeWidth,0);
+        assert.equal(doc.fillType,1);
+        assert.ok(doc.fillAlpha>=.3);
+        assert.ok(!('_id' in doc));
+      }
+    }
+  }
+  const start={x:0,y:0},end={x:130,y:0};
+  const triangle=arrowPoints(start,end,22,5,'end','triangle');
+  const diamond=arrowPoints(start,end,22,5,'end','diamond');
+  const chevron=arrowPoints(start,end,22,5,'end','chevron');
+  assert.equal(triangle.length,7,'default end-only arrow is backward compatible');
+  assert.equal(diamond.length,7);
+  assert.equal(chevron.length,9);
+  assert.notDeepEqual(triangle,diamond);
+  assert.notDeepEqual(triangle,chevron);
+  assert.equal(arrowPoints(start,end,22,5,'none','chevron').length,4);
+  assert.deepEqual(
+    arrowPoints(start,end,22,5,'end','not-a-shape'),
+    triangle,'unknown arrow shapes safely become triangle'
+  );
 });

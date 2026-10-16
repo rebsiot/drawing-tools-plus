@@ -126,6 +126,18 @@ v0.1.3 supersedes v0.1.2 and places the Selected Drawings inspector/Lock actions
 
 **Release:** v0.1.8 must pass CI before manifest moves; v0.1.7 is rollback. CI does not equal live Foundry verification.
 
+## 16.1 update — v0.1.9: delete confirmation class binding and contextual arrow options (2026-10-16)
+
+**Live Foundry screenshot:** Clicking **Delete** in v0.1.8 emits `TypeError: Cannot read properties of undefined (reading 'wait')` from `confirm`, then Quickbar reports `Delete confirmation failed. Nothing was deleted.` The failing source extracts `DialogV2.confirm` into a detached variable and calls it as `confirm(config)`; Foundry v14's static method uses `this.wait()`.
+
+**Fix in v0.1.9:** Keep the class reference `DialogV2 = foundry.applications.api.DialogV2` and call `await DialogV2.confirm(config)`. Retain existing explicit confirmation text, cancel/no-delete default, GM-only, lock, scene/ID rechecks, and native single-ID deletion. No data migration or permissive fallback.
+
+**Arrow changes:** `Arrow ends` (Start, End, Both, None) is now in a contextual panel hidden until the Arrow creation overlay is active. A new `Arrowhead shape` choice offers Triangle (existing default), Diamond and Chevron—all filled silhouettes rendered in the same single native polygon Drawing. `arrowPoints` accepts the head shape; both screen preview and saved native geometry use it, and creation flags store `headShape` alongside `ends`. New client preference defaults to Triangle; older Arrow Drawing flags/geometry remain intact.
+
+**Test:** In a backed-up disposable Scene, click Delete → Cancel, confirm object survives; Delete → Confirm, verify exactly one intended unlocked Drawing removed; try a locked Drawing and verify no deletion. Check Arrow panel stays closed with Select, Box, Circle and Text; choose Arrow and try each head shape with ends Start/End/Both. Confirm preview, create, reload and map visuals, with no painted-gridline changes. Static/mock tests are not live runtime proof.
+
+**Stable ID/contract:** `foundry-drawing-quickbar`, Foundry v14 target, same live manifest, restrictive license, prior v0.1.8 ZIP as rollback. No cross-module changes. Owning handoff: `docs/16-DRAWING-TOOLS-PLUS-HANDOFF.md`, global release/testing documents unchanged.
+
 ## Source of truth and GitHub release boundaries
 
 - Use the actual GitHub source at `rebsiot/drawing-tools-plus` (default branch `main`) and/or the newest verified working ZIP. Handoff notes describe intent but are not code.
