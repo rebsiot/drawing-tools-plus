@@ -6,7 +6,7 @@ export const TUTORIAL_DISMISSED_FLAG = "tutorialDismissed";
 export const TUTORIAL_STEPS = Object.freeze([
   Object.freeze({
     title: "Choose a drawing tool",
-    body: "Open the Quickbar from Tokens or Drawings. The top row has Select, Pen, Box, Circle, Polygon and Text. Row two has Line, Arrow, Route and Callout. Pen is freehand. Opening from Tokens preserves your selected tokens until you choose a Drawing tool."
+    body: "Open the Quickbar from Tokens or Drawings. The top row has Select, Pen, Box, Circle, Polygon and Text. Row two has Line, Arrow, Route and Callout. Pen is freehand. Opening from Tokens preserves selected tokens until you choose a Drawing tool. Click Tokens in the Quickbar header or close it to resume token movement."
   }),
   Object.freeze({
     title: "Select and change appearance",

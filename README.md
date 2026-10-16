@@ -1,4 +1,4 @@
-# Drawing Tools+ — v0.1.16 Beta
+# Drawing Tools+ — v0.1.17 Beta
 
 **Foundry:** v14 · **Module ID:** `foundry-drawing-quickbar` · **License:** [Personal Use Only (No Redistribution)](LICENSE.md)
 
@@ -7,6 +7,8 @@ A small floating toolbar for **native Foundry Scene Drawings**. No extra drawing
 **Launcher icon:** Both Token Controls and Drawing Controls now show the same **pen-and-ruler** symbol as the Drawing Quickbar header—not Foundry's generic Palette icon. This is a visual change only; both buttons still open the same toolbar.
 
 ## Core workflow
+
+- **Return to Tokens:** Click **Tokens** in the Quickbar header to resume native Token Controls without closing the panel. Closing the Quickbar from the Drawings layer also returns to Tokens. Canceling an unfinished Arrow, Line, Route or new Text returns to Tokens. Successfully created shapes remain selected so you can style and resize them, until you choose Tokens or close.
 
 - **Two compact tool rows:** Select, Pen, Box, Circle, Polygon and Text stay in row one. Row two has **Line, Arrow, Route and Callout**. A Line is a single straight stroke; a Route follows clicked waypoints; a Callout links a point of interest to an editable text label. Each uses native Foundry Drawings—no new drawing layer. Pen continues to use Foundry's native freehand workflow.
 - **Fast, stable multi-select:** **All Drawings** now sits above the entire **Selected Drawings** box. Click **Select** down the list—earlier selections stay selected, the list does not jump or rebuild, and the clicked button turns into **Deselect** in place. Deselect removes only that Drawing. The main **Unselect** button releases all controlled Drawings, and `V` still activates native Select without clearing it.
@@ -61,6 +63,6 @@ Report the exact Foundry v14 build and the **first browser console error** if a 
 
 The Quickbar uses native Drawing documents and native permissions. It does not provide custom user-named style libraries, grouping/layer replacement, advanced snapping, or a separate undo history. Background/Working groups remain planned, not implemented.
 
-To revert module code, install [v0.1.15](https://github.com/rebsiot/drawing-tools-plus/releases/tag/v0.1.15). This does **not** undo saved Scene document changes or restore deleted Drawings—keep your matching world backup.
+To revert module code, install [v0.1.16](https://github.com/rebsiot/drawing-tools-plus/releases/tag/v0.1.16). This does **not** undo saved Scene document changes or restore deleted Drawings—keep your matching world backup.
 
-[Readable Changelog](CHANGELOG.md) · [Release Notes](docs/releases/v0.1.16.md) · [Tests](docs/TEST-REPORT.md) · [Development Handoff](docs/16-DRAWING-TOOLS-PLUS-HANDOFF.md)
+[Readable Changelog](CHANGELOG.md) · [Release Notes](docs/releases/v0.1.17.md) · [Tests](docs/TEST-REPORT.md) · [Development Handoff](docs/16-DRAWING-TOOLS-PLUS-HANDOFF.md)

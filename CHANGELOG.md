@@ -2,6 +2,13 @@
 
 Short summaries of changes you can see in Foundry. See the [test report](docs/TEST-REPORT.md) for technical verification.
 
+## v0.1.17 — Return to Tokens from Drawing Quickbar
+- **Fixed:** Closing the Quickbar while using Drawings returns to native Token Controls.
+- **Added:** Compact Tokens button in the header restores Token selection without closing the Quickbar.
+- **Improved:** Canceling unfinished custom annotations and new text placement returns to Tokens. Canceling Edit Text on an existing Drawing preserves its selection.
+- **Preserved:** Completed shapes remain selected for immediate styling, resizing and moving; no changes to Scene Drawing IDs, permissions, locks or existing art.
+- **Verification:** Static/mock checks; live Foundry v14 pending.
+
 ## v0.1.16 — Lines, Routes, Callouts and First-Open Drawing Count
 - **New:** A compact second row has **Line, Arrow, Route and Callout**, with the original six drawing tools unchanged in row one.
 - **New:** Straight Line uses one narrow native polygon Drawing; Route records multiple clicked waypoints into one native editable polygon. Finish with double-click, Enter or Finish; cancel with Esc/right-click.

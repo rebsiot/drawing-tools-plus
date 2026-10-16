@@ -187,6 +187,8 @@ function refreshToolHighlight() {
   const active = textOverlay ? "text" : (arrowOverlay ? activeGeometryTool :
     (canvas?.drawings?.active ? (ui.controls?.tool?.name ?? "select") : null));
   const hasSelection = Boolean(canvas?.drawings?.active && selectedDrawingObjects().length);
+  const tokenButton = dock.querySelector('[data-action="tokens"]');
+  if (tokenButton) tokenButton.disabled = !canvas?.drawings?.active;
   for (const button of dock.querySelectorAll("[data-tool]")) {
     // Select is lit only while one or more native Drawings are controlled.
     const selected = button.dataset.tool === active &&
@@ -254,8 +256,11 @@ function createDock() {
   root.setAttribute("aria-label", "Drawing Quickbar");
   root.innerHTML = `
     <div class="dqb-header">
-      <span><i class="fa-solid fa-pen-ruler" aria-hidden="true"></i> Drawing Quickbar <small>v0.1.16</small></span>
-      <button type="button" class="dqb-icon" data-action="close" aria-label="Close Drawing Quickbar" title="Close"><i class="fa-solid fa-xmark"></i></button>
+      <span class="dqb-header-title"><i class="fa-solid fa-pen-ruler" aria-hidden="true"></i> Drawing Quickbar <small>v0.1.17</small></span>
+      <div class="dqb-header-actions">
+        <button type="button" class="dqb-to-tokens" data-action="tokens" aria-label="Return to Token Controls" title="Return to Token Controls; keep Quickbar open"><i class="fa-solid fa-arrow-pointer" aria-hidden="true"></i> Tokens</button>
+        <button type="button" class="dqb-icon" data-action="close" aria-label="Close Drawing Quickbar" title="Close and return to Tokens"><i class="fa-solid fa-xmark"></i></button>
+      </div>
     </div>
     <div class="dqb-content">
       <div class="dqb-tools" role="group" aria-label="Drawing tools">
@@ -342,7 +347,7 @@ function createDock() {
       </div>
       <label class="dqb-option"><input name="autoStyle" type="checkbox"> Apply my default style to new Drawings</label>
 
-      <div class="dqb-help">Deselect clears selection only. Delete confirms before removing one unlocked Drawing. Arrowhead options appear only in Arrow mode; Route uses waypoints. Undo Style Change only restores appearance.</div>
+      <div class="dqb-help">Finished editing? Click Tokens above or close this Quickbar to resume using tokens. Deselect never deletes; Delete confirms. Route uses waypoints. Undo Style Change only restores appearance.</div>
       <div class="dqb-footer"><button type="button" data-action="tutorial" title="Reopen the quick tutorial anytime" aria-label="Open Drawing Quickbar tutorial"><i class="fa-solid fa-circle-question" aria-hidden="true"></i> Tutorial</button></div>
     </div>`;
   document.body.append(root);
@@ -369,6 +374,7 @@ function createDock() {
       updateDockInputs();
     }
     if (button.dataset.action === "close") closeDock();
+    if (button.dataset.action === "tokens") await returnToTokens();
     if (button.dataset.action === "tutorial") showTutorial();
     if (button.dataset.action === "finish-route") void finishRoute();
     if (button.dataset.action === "deselect-one") {
@@ -570,7 +576,8 @@ async function openDock({activateDrawings = true} = {}) {
   refreshToolHighlight();
   maybeOfferTutorial();
 }
-function closeDock() {
+function closeDock({restoreTokens = true} = {}) {
+  const shouldRestoreTokens = Boolean(restoreTokens && dock && canvas?.drawings?.active);
   closeTutorial();
   closeInspect();
   newDrawingSerial++;
@@ -586,9 +593,29 @@ function closeDock() {
   dock = null;
   finderVisibleCount = FINDER_PAGE_SIZE;
   finderLockedOnly = false;
+  if (shouldRestoreTokens) void returnToTokens();
 }
 function toggleDock({activateDrawings = true} = {}) {
   return dock ? closeDock() : openDock({activateDrawings});
+}
+
+/** Native Drawings are required for creating and directly editing a shape.
+ * Tokens can be restored without closing the Quickbar or changing Scene data.
+ */
+async function returnToTokens() {
+  ++newDrawingSerial; // Cancel a pending automatic Drawing selection.
+  exitArrow();
+  exitTextPlacement();
+  suspendShortcuts = false;
+  if (!canvas?.ready || !canvas?.drawings?.active || !ui?.controls) return;
+  try {
+    await ui.controls.activate({control: "tokens", tool: "select"});
+  } catch (error) {
+    console.error(MODULE_ID + " | Could not return to Token Controls", error);
+    notify("Could not return to Token Controls. Choose Tokens on the Foundry toolbar.", "error");
+  }
+  refreshToolHighlight();
+  refreshSelectedPanel();
 }
 
 async function selectTool(tool, {toggleSelection = false} = {}) {
@@ -1291,7 +1318,7 @@ function enterArrow(tool = "arrow") {
   updateArrowBounds();
   arrowOverlay.addEventListener("contextmenu", event => {
     event.preventDefault();
-    exitArrow();
+    void returnToTokens();
   });
   arrowOverlay.addEventListener("pointerdown", event => {
     if (event.button !== 0) return;
@@ -1398,6 +1425,12 @@ function exitTextPlacement() {
   textScene = null;
   refreshToolHighlight();
 }
+/** Canceling a NEW label returns to Tokens; canceling Edit Text preserves native selection. */
+function cancelTextDialog() {
+  const creating = Boolean(textOverlay || (textScene && !textScene.drawingId));
+  exitTextPlacement();
+  if (creating) void returnToTokens();
+}
 function enterTextPlacement() {
   if (!dock || !isUsable() || !canvas.drawings.active) return;
   exitArrow();
@@ -1410,7 +1443,7 @@ function enterTextPlacement() {
   updateTextBounds();
   textOverlay.addEventListener("contextmenu", event => {
     event.preventDefault();
-    exitTextPlacement();
+    void returnToTokens();
   });
   textOverlay.addEventListener("pointerdown", event => {
     if (event.button !== 0 || textDialog) return;
@@ -1475,7 +1508,7 @@ function showTextDialog(clientX, clientY) {
   popup.elements.namedItem("textColor").value = initial.textColor;
   popup.elements.namedItem("fontSizePreset").value = String(initial.fontSize);
   popup.addEventListener("click", event => {
-    if (event.target.closest('[data-action="cancel-text"]')) exitTextPlacement();
+    if (event.target.closest('[data-action="cancel-text"]')) cancelTextDialog();
   });
   popup.addEventListener("change", event => {
     if (event.target.name === "fontSizePreset" && event.target.value) {
@@ -1486,7 +1519,7 @@ function showTextDialog(clientX, clientY) {
     // Prevent shortcut handlers (ours or Foundry's bubble-phase handlers) from seeing typed text.
     if (event.key === "Escape") {
       event.preventDefault();
-      exitTextPlacement();
+      cancelTextDialog();
     }
     event.stopPropagation();
   });
@@ -1551,8 +1584,7 @@ function onKeydown(event) {
   if (!dock || !isUsable() || tutorialDialog?.open || inspectDialog?.open) return;
   if (event.key === "Escape" && (arrowOverlay || textOverlay)) {
     event.preventDefault();
-    exitArrow();
-    exitTextPlacement();
+    void returnToTokens();
     return;
   }
   if (event.key === "Enter" && activeGeometryTool === "route" && arrowOverlay &&
@@ -1625,7 +1657,7 @@ Hooks.once("ready", () => {
         ? penStylePatch(preferences) : {fillType: 0, fillAlpha: 0});
     } else if (applyDefaults) document.updateSource(stylePatch(preferences));
   });
-  Hooks.on("canvasReady", () => {lastStyleUndo = null; closeDock();});
+  Hooks.on("canvasReady", () => {lastStyleUndo = null; closeDock({restoreTokens: false});});
   Hooks.on("deactivateDrawingsLayer", () => {
     exitArrow();
     exitTextPlacement();
@@ -1672,5 +1704,5 @@ Hooks.once("ready", () => {
     // A tool switch or Scene navigation should never leave an invisible input shield over the canvas.
     if (arrowOverlay && !arrowOverlay.contains(event.target) && !dock?.contains(event.target) && !canvas?.drawings?.active) exitArrow();
   });
-  console.info(`${MODULE_ID} | v0.1.16 ready (Foundry v14 native Drawing workflow)`);
+  console.info(`${MODULE_ID} | v0.1.17 ready (Foundry v14 native Drawing workflow)`);
 });
