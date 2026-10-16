@@ -1,6 +1,7 @@
 import {
   MODULE_ID, DEFAULT_PREFS, PRESETS, normalizePrefs, stylePatch,
-  snapshotStyle, arrowPoints, arrowDocumentData, duplicateDrawingData, shouldStyleNewDrawing
+  snapshotStyle, arrowPoints, arrowDocumentData, duplicateDrawingData, textDocumentData,
+  drawingLabel, shouldRunDrawingShortcut, shouldStyleNewDrawing
 } from "./model.js";
 
 const TOOLS = new Set(["select", "rect", "ellipse", "polygon", "freehand", "text"]);
@@ -10,6 +11,10 @@ let dock = null;
 let arrowOverlay = null;
 let arrowStart = null;
 let arrowPointerId = null;
+let textOverlay = null;
+let textDialog = null;
+let textScene = null;
+let suspendShortcuts = false;
 let lastStyleUndo = null;
 let saveQueue = Promise.resolve();
 let saveTimer = null;
@@ -43,10 +48,11 @@ function updateDockInputs() {
   dock.querySelector('[data-value="fontSize"]').textContent = `${preferences.fontSize}px`;
   dock.querySelector('[data-action="undo-style"]').disabled = !lastStyleUndo;
   refreshToolHighlight();
+  refreshSelectedPanel();
 }
 function refreshToolHighlight() {
   if (!dock) return;
-  const active = arrowOverlay ? "arrow" : (ui.controls?.tool?.name ?? "select");
+  const active = textOverlay ? "text" : (arrowOverlay ? "arrow" : (ui.controls?.tool?.name ?? "select"));
   for (const button of dock.querySelectorAll("[data-tool]")) {
     const selected = button.dataset.tool === active;
     button.classList.toggle("active", selected);
@@ -85,7 +91,7 @@ function createDock() {
   root.setAttribute("aria-label", "Drawing Quickbar");
   root.innerHTML = `
     <div class="dqb-header">
-      <span><i class="fa-solid fa-pen-ruler" aria-hidden="true"></i> Drawing Quickbar <small>v0.1.1</small></span>
+      <span><i class="fa-solid fa-pen-ruler" aria-hidden="true"></i> Drawing Quickbar <small>v0.1.2</small></span>
       <button type="button" class="dqb-icon" data-action="close" aria-label="Close Drawing Quickbar" title="Close"><i class="fa-solid fa-xmark"></i></button>
     </div>
     <div class="dqb-content">
@@ -115,13 +121,23 @@ function createDock() {
         <label class="dqb-wide">Text size <strong data-value="fontSize"></strong><input name="fontSize" type="range" min="8" max="120" step="2"></label>
       </div>
       <label class="dqb-option"><input name="autoStyle" type="checkbox"> Use this style for new drawings while Quickbar is open</label>
-      <div class="dqb-actions">
-        <button type="button" data-action="duplicate-selected" title="Duplicate selected, unlocked native drawings, offset 24 pixels"><i class="fa-solid fa-copy"></i> Duplicate</button>
-        <button type="button" data-action="edit-text" title="Edit the text on exactly one selected, unlocked native drawing"><i class="fa-solid fa-pen-to-square"></i> Edit Text</button>
-        <button type="button" data-action="apply-selected" title="Apply style to selected existing drawings"><i class="fa-solid fa-paintbrush"></i> Style Selected</button>
-        <button type="button" data-action="undo-style" title="Restore previous selected drawing styles"><i class="fa-solid fa-rotate-left"></i> Revert Style</button>
-      </div>
-      <div class="dqb-help">Draw using Foundry's native tools. Select drawings with V to move/resize them. Double-click a drawing for its full native settings. Shortcuts work only on the Drawings layer. Arrow: drag, Esc to exit.</div>
+      <section class="dqb-selection" aria-label="Selected drawings">
+        <div class="dqb-section-title">SELECTED DRAWINGS <strong data-value="selected-count">0</strong></div>
+        <div class="dqb-selected-list" aria-live="polite"></div>
+        <div class="dqb-actions">
+          <button type="button" data-action="lock-selected" title="Protect selected drawings from ordinary canvas edits"><i class="fa-solid fa-lock"></i> Lock</button>
+          <button type="button" data-action="open-properties" title="Open native properties for one selected drawing"><i class="fa-solid fa-sliders"></i> Properties</button>
+          <button type="button" data-action="duplicate-selected" title="Duplicate selected, unlocked native drawings, offset 24 pixels"><i class="fa-solid fa-copy"></i> Duplicate</button>
+          <button type="button" data-action="edit-text" title="Edit the text on exactly one selected, unlocked native drawing"><i class="fa-solid fa-pen-to-square"></i> Edit Text</button>
+          <button type="button" data-action="apply-selected" title="Apply style to selected unlocked drawings"><i class="fa-solid fa-paintbrush"></i> Style Selected</button>
+          <button type="button" data-action="undo-style" title="Restore previous selected drawing styles"><i class="fa-solid fa-rotate-left"></i> Revert Style</button>
+        </div>
+        <details class="dqb-locked">
+          <summary>Locked Drawings (<span data-value="locked-count">0</span>)</summary>
+          <div class="dqb-locked-list"></div>
+        </details>
+      </section>
+      <div class="dqb-help">Text: click the map, enter your label and choose a font size. Select objects to reveal Lock, Properties, Duplicate, Edit Text and styling. Locked objects can be recovered from the list above. Esc cancels Arrow or Text placement.</div>
     </div>`;
   document.body.append(root);
   const left = preferences.position?.left ?? 112;
@@ -139,6 +155,13 @@ function createDock() {
       safeSave();
     }
     if (button.dataset.action === "close") closeDock();
+    if (button.dataset.action === "deselect-one") {
+      canvas?.drawings?.get(button.dataset.drawingId)?.release();
+      refreshSelectedPanel();
+    }
+    if (button.dataset.action === "unlock-one") await unlockDrawing(button.dataset.drawingId);
+    if (button.dataset.action === "lock-selected") await lockSelected();
+    if (button.dataset.action === "open-properties") await openSelectedProperties();
     if (button.dataset.action === "duplicate-selected") await duplicateSelected();
     if (button.dataset.action === "edit-text") editSelectedText();
     if (button.dataset.action === "apply-selected") await styleSelected();
@@ -167,6 +190,7 @@ async function openDock() {
 }
 function closeDock() {
   exitArrow();
+  exitTextPlacement();
   dock?.remove();
   dock = null;
 }
@@ -174,24 +198,127 @@ function toggleDock() { return dock ? closeDock() : openDock(); }
 
 async function selectTool(tool) {
   if (!dock || !isUsable()) return;
-  if (tool === "arrow") {
+  if (tool === "arrow" || tool === "text") {
     try {
       await ui.controls.activate({control: "drawings", tool: "select"});
-      enterArrow();
+      suspendShortcuts = false;
+      if (tool === "arrow") enterArrow();
+      else enterTextPlacement();
     } catch (error) {
-      console.error(`${MODULE_ID} | Arrow activation failed`, error);
-      notify("Could not activate Arrow mode.", "error");
+      console.error(MODULE_ID + " | Drawing tool activation failed", error);
+      notify("Could not activate the drawing tool.", "error");
     }
     return;
   }
   if (!TOOLS.has(tool)) return;
   exitArrow();
+  exitTextPlacement();
+  suspendShortcuts = false;
   try { await ui.controls.activate({control: "drawings", tool}); }
   catch (error) {
     console.error(`${MODULE_ID} | Could not select native drawing tool`, error);
     notify("The native drawing tool could not be selected.", "error");
   }
   refreshToolHighlight();
+}
+
+/** Read current native selection; no persistent selection flags. */
+function selectedDrawingObjects() {
+  return [...(canvas?.drawings?.controlled ?? [])].filter(item => item?.document?.id);
+}
+function sceneDrawingDocuments() {
+  const drawings = canvas?.scene?.drawings;
+  return drawings?.contents ?? [...(drawings ?? [])];
+}
+function makeObjectRow(document, action, title) {
+  const label = drawingLabel(document);
+  const row = documentCreate("div", "dqb-object-row");
+  const details = documentCreate("span", "dqb-object-name");
+  details.textContent = label.name;
+  details.title = label.name + " (" + (document.id ?? "") + ")";
+  const sub = documentCreate("small", "dqb-object-kind");
+  sub.textContent = label.kind + (label.locked ? " · Locked" : "");
+  const summary = documentCreate("span", "dqb-object-summary");
+  summary.append(details, sub);
+  const button = documentCreate("button", "dqb-mini");
+  button.type = "button";
+  button.dataset.action = action;
+  button.dataset.drawingId = document.id;
+  button.title = title;
+  button.setAttribute("aria-label", title + ": " + label.name);
+  button.textContent = action === "unlock-one" ? "Unlock" : "Remove";
+  row.append(summary, button);
+  return row;
+}
+function documentCreate(tag, className) {
+  const el = document.createElement(tag);
+  el.className = className;
+  return el;
+}
+function refreshSelectedPanel() {
+  if (!dock) return;
+  const selected = selectedDrawingObjects();
+  const selectedList = dock.querySelector(".dqb-selected-list");
+  const lockedList = dock.querySelector(".dqb-locked-list");
+  if (!selectedList || !lockedList) return;
+  dock.querySelector('[data-value="selected-count"]').textContent = String(selected.length);
+  selectedList.replaceChildren(...(selected.length
+    ? selected.map(item => makeObjectRow(item.document, "deselect-one", "Deselect drawing"))
+    : [Object.assign(documentCreate("p", "dqb-empty"), {textContent: "No drawings selected"})]));
+  const editable = selected.filter(item => !item.document.locked);
+  for (const action of ["lock-selected", "duplicate-selected", "apply-selected"]) {
+    dock.querySelector('[data-action="' + action + '"]').disabled = !editable.length;
+  }
+  for (const action of ["edit-text", "open-properties"]) {
+    dock.querySelector('[data-action="' + action + '"]').disabled =
+      selected.length !== 1 || editable.length !== 1;
+  }
+  const locked = sceneDrawingDocuments().filter(doc => doc?.locked).sort((a,b) =>
+    drawingLabel(a).name.localeCompare(drawingLabel(b).name));
+  dock.querySelector('[data-value="locked-count"]').textContent = String(locked.length);
+  lockedList.replaceChildren(...(locked.length
+    ? locked.map(doc => makeObjectRow(doc, "unlock-one", "Unlock drawing"))
+    : [Object.assign(documentCreate("p", "dqb-empty"), {textContent: "No locked drawings"})]));
+}
+
+async function lockSelected() {
+  if (!isUsable() || !canvas.drawings.active) return notify("Open the Drawings layer first.");
+  const scene = canvas.scene;
+  const drawings = selectedEditableObjects().map(item => item.document);
+  if (!drawings.length) return notify("Select unlocked drawings to protect.");
+  try {
+    const updated = await scene.updateEmbeddedDocuments("Drawing", drawings.map(doc => ({_id: doc.id, locked: true})));
+    notify("Locked " + updated.length + " drawing(s). Use Locked Drawings to unlock.", "info");
+  } catch(error) {
+    console.error(MODULE_ID + " | Could not lock drawings", error);
+    notify("Could not lock selected drawings. See console.", "error");
+  }
+  refreshSelectedPanel();
+}
+async function unlockDrawing(id) {
+  if (!isUsable() || !canvas.drawings.active) return;
+  const doc = canvas.scene.drawings.get(id);
+  if (!doc?.locked) return refreshSelectedPanel();
+  try {
+    await canvas.scene.updateEmbeddedDocuments("Drawing", [{_id: id, locked: false}]);
+    notify("Drawing unlocked. It is not automatically selected.", "info");
+  } catch (error) {
+    console.error(MODULE_ID + " | Could not unlock drawing", error);
+    notify("Could not unlock drawing. See console.", "error");
+  }
+  refreshSelectedPanel();
+}
+async function openSelectedProperties() {
+  const selected = selectedEditableObjects();
+  if (selected.length !== 1 || selectedDrawingObjects().length !== 1) {
+    return notify("Select exactly one unlocked drawing.");
+  }
+  try {
+    await selected[0].sheet.render({force: true});
+  } catch(error) {
+    console.error(MODULE_ID + " | Native drawing properties failed", error);
+    notify("Could not open Drawing properties. See console.", "error");
+  }
 }
 
 /**
@@ -240,7 +367,11 @@ function editSelectedText() {
   if (typeof placeable.enableTextEditing !== "function") {
     return notify("This Foundry build does not expose the native inline text editor.", "error");
   }
-  try { placeable.enableTextEditing(); }
+  try {
+    // A PIXI-based native editor may receive keys at document level rather than a DOM input.
+    suspendShortcuts = true;
+    placeable.enableTextEditing();
+  }
   catch (error) {
     console.error(`${MODULE_ID} | Inline text editing failed`, error);
     notify("Could not open the native inline text editor. See console.", "error");
@@ -249,7 +380,7 @@ function editSelectedText() {
 
 async function styleSelected() {
   if (!isUsable() || !canvas.drawings.active) return notify("Open the Drawings layer and select one or more drawings.");
-  const selected = [...(canvas.drawings.controlled ?? [])].map(o => o.document).filter(d => d?.id && !d.locked);
+  const selected = selectedEditableObjects().map(object => object.document);
   if (!selected.length) return notify("Select one or more unlocked drawings first.");
   const scene = canvas.scene;
   const backups = selected.map(snapshotStyle);
@@ -383,18 +514,175 @@ function exitArrow() {
   arrowOverlay = null;
   refreshToolHighlight();
 }
-function onKeydown(event) {
-  if (!dock || !isUsable() || event.repeat || event.ctrlKey || event.metaKey || event.altKey) return;
-  const el = event.target;
-  if (el instanceof Element && el.closest("input, textarea, select, [contenteditable], [role='textbox']")) return;
-  if (event.key === "Escape" && arrowOverlay) {
+
+/**
+ * Placement overlay only: text itself is a native Drawing document.
+ * Clicking the map never writes world data until the user submits the form.
+ */
+function updateTextBounds() {
+  if (!textOverlay) return;
+  const board = boardElement();
+  if (!board) return;
+  const rect = board.getBoundingClientRect();
+  for (const prop of ["left", "top", "width", "height"]) textOverlay.style[prop] = rect[prop] + "px";
+}
+function exitTextPlacement() {
+  textDialog?.remove();
+  textDialog = null;
+  textOverlay?.remove();
+  textOverlay = null;
+  textScene = null;
+  refreshToolHighlight();
+}
+function enterTextPlacement() {
+  if (!dock || !isUsable() || !canvas.drawings.active) return;
+  exitArrow();
+  exitTextPlacement();
+  if (!boardElement()) return notify("Cannot locate the Foundry canvas.", "error");
+  textOverlay = document.createElement("div");
+  textOverlay.id = "dqb-text-overlay";
+  textOverlay.title = "Click the map to place a text label; Esc to cancel";
+  document.body.append(textOverlay);
+  updateTextBounds();
+  textOverlay.addEventListener("contextmenu", event => {
     event.preventDefault();
-    selectTool("select");
+    exitTextPlacement();
+  });
+  textOverlay.addEventListener("pointerdown", event => {
+    if (event.button !== 0 || textDialog) return;
+    try {
+      const position = scenePoint(event);
+      textScene = {sceneId: canvas.scene.id, position};
+      showTextDialog(event.clientX, event.clientY);
+      event.preventDefault();
+    } catch(error) {
+      console.error(MODULE_ID + " | Text placement coordinates unavailable", error);
+      notify("Cannot position text here. See console.", "error");
+      exitTextPlacement();
+    }
+  });
+  refreshToolHighlight();
+}
+function showTextDialog(clientX, clientY) {
+  if (!textScene || textDialog) return;
+  const popup = document.createElement("form");
+  popup.id = "dqb-text-dialog";
+  popup.setAttribute("aria-label", "Text options");
+  popup.innerHTML = `
+    <div class="dqb-text-dialog-title">Place Text
+      <button type="button" data-action="cancel-text" title="Cancel text placement" aria-label="Cancel text placement">&times;</button>
+    </div>
+    <label>Text <textarea name="drawingText" rows="3" maxlength="2000" placeholder="Type your label here" required></textarea></label>
+    <div class="dqb-text-dialog-options">
+      <label>Size
+        <select name="fontSizePreset" aria-label="Font size preset">
+          <option value="">Custom</option>
+          <option value="16">Small · 16px</option>
+          <option value="24">Medium · 24px</option>
+          <option value="32">Normal · 32px</option>
+          <option value="48">Large · 48px</option>
+          <option value="64">XL · 64px</option>
+          <option value="96">Huge · 96px</option>
+        </select>
+      </label>
+      <label>Pixels <input name="fontSize" type="number" min="8" max="120" step="1" required></label>
+      <label>Color <input name="textColor" type="color"></label>
+    </div>
+    <div class="dqb-text-dialog-actions">
+      <button type="button" data-action="cancel-text">Cancel</button>
+      <button type="submit" class="dqb-primary">Place Text</button>
+    </div>`;
+  document.body.append(popup);
+  textDialog = popup;
+  popup.style.left = Math.max(8, Math.min(window.innerWidth - 338, clientX + 15)) + "px";
+  popup.style.top = Math.max(8, Math.min(window.innerHeight - 340, clientY + 15)) + "px";
+  popup.elements.namedItem("fontSize").value = String(preferences.fontSize);
+  popup.elements.namedItem("textColor").value = preferences.textColor;
+  popup.elements.namedItem("fontSizePreset").value = String(preferences.fontSize);
+  popup.addEventListener("click", event => {
+    if (event.target.closest('[data-action="cancel-text"]')) exitTextPlacement();
+  });
+  popup.addEventListener("change", event => {
+    if (event.target.name === "fontSizePreset" && event.target.value) {
+      popup.elements.namedItem("fontSize").value = event.target.value;
+    }
+  });
+  popup.addEventListener("keydown", event => {
+    // Prevent shortcut handlers (ours or Foundry's bubble-phase handlers) from seeing typed text.
+    if (event.key === "Escape") {
+      event.preventDefault();
+      exitTextPlacement();
+    }
+    event.stopPropagation();
+  });
+  popup.addEventListener("keyup", event => event.stopPropagation());
+  popup.addEventListener("submit", async event => {
+    event.preventDefault();
+    event.stopPropagation();
+    if (!textScene || !isUsable() || canvas.scene.id !== textScene.sceneId) {
+      exitTextPlacement();
+      return notify("The Scene changed. Text was not added.");
+    }
+    const raw = popup.elements.namedItem("drawingText").value;
+    const newPreferences = normalizePrefs({
+      ...preferences, fontSize: Number(popup.elements.namedItem("fontSize").value),
+      textColor: popup.elements.namedItem("textColor").value
+    });
+    const createdData = textDocumentData(textScene.position, raw, newPreferences);
+    if (!createdData) return notify("Enter text and a valid font size.", "warn");
+    const button = popup.querySelector('[type="submit"]');
+    button.disabled = true;
+    try {
+      const created = await canvas.scene.createEmbeddedDocuments("Drawing", [createdData]);
+      if (!created?.length) throw new Error("No Drawing created");
+      preferences = newPreferences;
+      safeSave();
+      updateDockInputs();
+      try { canvas.drawings.storeHistory("create", created.map(doc => doc.toObject())); }
+      catch(error) { console.debug(MODULE_ID + " | Native text undo not available", error); }
+      exitTextPlacement();
+      try {
+        canvas.drawings.releaseAll();
+        canvas.drawings.get(created[0].id)?.control({releaseOthers: false});
+      } catch(error) { console.debug(MODULE_ID + " | Could not select new text", error); }
+      refreshSelectedPanel();
+    } catch(error) {
+      console.error(MODULE_ID + " | Could not place text", error);
+      notify("Could not place text. See console.", "error");
+      button.disabled = false;
+    }
+  });
+  popup.elements.namedItem("drawingText").focus();
+}
+
+function onKeydown(event) {
+  if (!dock || !isUsable()) return;
+  if (event.key === "Escape" && (arrowOverlay || textOverlay)) {
+    event.preventDefault();
+    exitArrow();
+    exitTextPlacement();
     return;
   }
-  if (!canvas.drawings.active) return;
+  // Foundry's native Text tool listens on document, not necessarily an input.
+  const editable = "input, textarea, select, [contenteditable], [role='textbox']";
+  const isEditable = el => el instanceof Element && Boolean(el.closest(editable));
+  const nativeEditor = Boolean(suspendShortcuts ||
+    [...(canvas.drawings.placeables ?? [])].some(item => Boolean(item?._onkeydown)));
+  if (!shouldRunDrawingShortcut({
+    tool: ui.controls?.tool?.name,
+    activeLayer: canvas.drawings.active,
+    editableTarget: isEditable(event.target) || isEditable(document.activeElement),
+    nativeEditor,
+    quickbarEditor: Boolean(textOverlay || textDialog),
+    isComposing: event.isComposing,
+    repeated: event.repeat,
+    modified: event.ctrlKey || event.metaKey || event.altKey
+  })) return;
   const tool = KEY_TO_TOOL[event.key.toLowerCase()];
-  if (tool) { event.preventDefault(); selectTool(tool); }
+  if (tool) {
+    event.preventDefault();
+    selectTool(tool);
+  }
 }
 
 Hooks.once("init", () => {
@@ -424,17 +712,34 @@ Hooks.once("ready", () => {
     })) document.updateSource(stylePatch(preferences));
   });
   Hooks.on("canvasReady", () => {lastStyleUndo = null; closeDock();});
-  Hooks.on("deactivateDrawingsLayer", () => exitArrow());
-  Hooks.on("renderSceneControls", () => refreshToolHighlight());
-  ui.controls?.addEventListener?.("activate", () => {
-    if (arrowOverlay && (!canvas?.drawings?.active || ui.controls?.tool?.name !== "select")) exitArrow();
-    refreshToolHighlight();
+  Hooks.on("deactivateDrawingsLayer", () => {
+    exitArrow();
+    exitTextPlacement();
   });
-  window.addEventListener("resize", updateArrowBounds);
+  Hooks.on("controlDrawing", () => queueMicrotask(refreshSelectedPanel));
+  Hooks.on("updateDrawing", refreshSelectedPanel);
+  Hooks.on("createDrawing", refreshSelectedPanel);
+  Hooks.on("deleteDrawing", refreshSelectedPanel);
+  Hooks.on("renderSceneControls", () => {
+    refreshToolHighlight();
+    refreshSelectedPanel();
+  });
+  ui.controls?.addEventListener?.("activate", () => {
+    if ((!canvas?.drawings?.active || ui.controls?.tool?.name !== "select")) {
+      exitArrow();
+      exitTextPlacement();
+    }
+    refreshToolHighlight();
+    refreshSelectedPanel();
+  });
+  window.addEventListener("resize", () => {
+    updateArrowBounds();
+    updateTextBounds();
+  });
   document.addEventListener("keydown", onKeydown);
   document.addEventListener("pointerdown", event => {
     // A tool switch or Scene navigation should never leave an invisible input shield over the canvas.
     if (arrowOverlay && !arrowOverlay.contains(event.target) && !dock?.contains(event.target) && !canvas?.drawings?.active) exitArrow();
   });
-  console.info(`${MODULE_ID} | v0.1.1 ready (Foundry v14 native Drawing workflow)`);
+  console.info(`${MODULE_ID} | v0.1.2 ready (Foundry v14 native Drawing workflow)`);
 });

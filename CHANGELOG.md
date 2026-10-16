@@ -1,5 +1,17 @@
 # Drawing Quickbar — Changelog
 
+## v0.1.2 — 2026-10-16 (beta)
+
+- **Fixed:** Single-letter Quickbar shortcuts no longer intercept Foundry native Text tool or native inline editing. Guarded against canvas text listeners, popup focus, composition and inputs.
+- **Added:** Text-placement popup on click with focused textarea, font-size presets, numeric pixel size and color. Save creates one native Drawing; Cancel/Esc leaves the Scene untouched.
+- **Added:** Selected Drawings inspector shows each selected native Drawing with readable name/type and Deselect; persistent Lock, Properties, Duplicate, Edit Text, Apply Style and Revert Style actions.
+- **Added:** Explicit native Drawing `locked` update for selected objects, plus an expandable Locked Drawings list with per-Drawing unlock. Existing Drawings are never locked automatically.
+- **Preserved:** No Drawing deletions or migrations, no changes to other modules, core files or Scene geometry. `foundry-drawing-quickbar` module ID and settings unchanged.
+- **Tests:** Pure helpers, editor shortcut gating, release metadata, CI and ZIP build. Live Foundry v14 verification of new popup, locking and selection still required.
+- **Planned:** Background/Working organizational groups and further manipulation UX from GitHub issue #1.
+
+
+
 ## v0.1.1 — 2026-10-16 (beta)
 
 - **Fixed (based on live report):** Arrow no longer uses legacy invalid `shape.type: "f"` rejected by Foundry v14. It uses one closed, filled native polygon (`"p"`) with an arrow silhouette. Coordinate/persistence/undo regression requires live verification.

@@ -144,3 +144,51 @@ export function shouldStyleNewDrawing({open, active, autoStyle, userId, currentU
   return Boolean(open && active && autoStyle && userId === currentUserId && !existingId &&
     sceneId && sceneId === parentId && ["rect", "ellipse", "polygon", "freehand", "text"].includes(tool));
 }
+
+/** A native v14 rectangle Drawing used to display one text label. */
+export function textDocumentData(point, text, options = {}) {
+  if (!point || !Number.isFinite(point.x) || !Number.isFinite(point.y)) return null;
+  if (typeof text !== "string" || !text.trim() || text.length > 2000) return null;
+  const p = normalizePrefs(options);
+  const size = p.fontSize;
+  const lines = text.replace(/\r\n?/g, "\n").split("\n");
+  const longest = Math.max(...lines.map(line => [...line].length));
+  // Generous initial bounds; native resize handles remain available.
+  const width = Math.max(90, Math.min(2400, Math.ceil(longest * size * 0.7 + 36)));
+  const height = Math.max(size + 18, Math.min(2400, Math.ceil(lines.length * size * 1.35 + 24)));
+  return {
+    name: "Text: " + text.trim().slice(0, 48),
+    x: Math.round(point.x),
+    y: Math.round(point.y),
+    shape: {type: "r", width, height},
+    text: text.replace(/\r\n?/g, "\n"),
+    textColor: p.textColor,
+    fontSize: size,
+    textAlpha: 1,
+    fillType: 0,
+    fillAlpha: 0,
+    strokeWidth: 0,
+    strokeAlpha: 0
+  };
+}
+
+/** Readable metadata for a selected native Drawing; no mutations or generated IDs. */
+export function drawingLabel(document) {
+  if (!document) return "Drawing";
+  const shape = document.shape?.type;
+  const kind = document.text?.trim() ? "Text" : ({
+    r: "Rectangle", e: "Ellipse", p: "Polygon"
+  }[shape] || "Drawing");
+  const name = typeof document.name === "string" ? document.name.trim() : "";
+  const detail = name || (document.text?.trim().slice(0, 40)) || ((document.id || "").slice(0, 8));
+  return {kind, name: detail || "Untitled", locked: Boolean(document.locked)};
+}
+
+/** Avoid consuming keys used by native or Quickbar text editors. */
+export function shouldRunDrawingShortcut({
+  tool, activeLayer, editableTarget, nativeEditor, quickbarEditor, isComposing,
+  repeated, modified
+} = {}) {
+  return Boolean(activeLayer && tool !== "text" && !editableTarget && !nativeEditor &&
+    !quickbarEditor && !isComposing && !repeated && !modified);
+}

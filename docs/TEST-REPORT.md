@@ -1,6 +1,13 @@
-# Test Report — Drawing Quickbar v0.1.1
+# Test Report — Drawing Quickbar v0.1.2
 
 **Date:** 2026-10-16
+
+## v0.1.2 beta (2026-10-16) — test evidence
+
+**Reported live issue:** Quickbar letter shortcuts hijacked typing into Foundry's canvas text tool.
+**Implementation:** Quickbar Text uses a focused popup and creates a native rectangular Drawing; native Text mode and inline editors bypass shortcut activation. Added selected-Drawing inspector and explicit native lock/unlock recovery.
+**Automated tests:** New model tests cover label data, popup size bounds and shortcut gating. Integration lifecycle mock checks Foundry Drawing selection/update hooks; CI runs syntax, tests and complete ZIP packaging.
+**Requires live testing:** The popup's canvas click, focus and persistence; editor shortcut behavior; selection updates; locking/unlocking existing Drawing documents and preserving painted gridlines. No live success is claimed for these changes.
 
 ## v0.1.1 beta (2026-10-16) — test evidence
 

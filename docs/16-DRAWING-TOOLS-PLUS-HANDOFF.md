@@ -31,6 +31,19 @@ The current module has native selection/freehand/rectangle/ellipse/polygon/text 
 
 **Release sequencing:** GitHub prerelease `v0.1.1` must be built and verified before moving the stable `main/module.json` manifest. Validate Arrow/duplicate/inline editor in a test world, then tackle the Selected Objects inspector/locking UX.
 
+## 16.1 update — v0.1.2: text popup and selection/lock controls (2026-10-16)
+
+**Live user report:** Quickbar Text placement on the canvas caused letters to activate Quickbar shortcut tools. The GM requests a text-options box on map click with font-size choices, and clearly visible Lock/other actions when Drawings are selected.
+
+**v0.1.2 changes (automated/mock validation only):**
+- Quickbar Text activates a placement-only overlay, then opens a focused textarea plus font-size presets/numeric size and text color on map click. Save creates one native rectangle Drawing; cancel/Esc creates nothing. Native canvas Text tool remains available; Quickbar's single-letter shortcuts are suppressed during native text editing as well.
+- A selected-objects inspector lists native controlled Drawings with human-readable name/type and per-Drawing Deselect. Actions shown include Lock, Properties (native sheet), Duplicate, Edit Text, Apply Style and Revert Style.
+- Lock updates only the chosen native Drawing `locked` fields, no automatic bulk changes. Expand Locked Drawings for recovery/unlock without being able to select locked Drawings on canvas.
+- No logical background/working group or secondary canvas layer yet. Groups remain a planned follow-up under GitHub issue #1; native Drawing locking is the present safety mechanism.
+- Module ID/settings/flags, source-only ZIP, stable manifest URL and restrictive Personal Use Only license remain unchanged. v0.1.2 release must be verified before advancing the permanent manifest.
+- New paths affected: `scripts/main.js`, `scripts/model.js`, `styles/quickbar.css`, tests, changelog/readme/handoff.
+- **Pending user smoke test:** 1) create text containing 'TVRA' in popup; ensure no shortcut switches. 2) edit existing text with native inline editor and type 'VRTA'; ensure no tool changes. 3) select spare drawings and confirm list/actions, Lock, unlock and persistence. 4) verify existing painted gridlines remain intact. 5) test the previous Arrow beta fix and duplicate operation.
+
 ## Source of truth and GitHub release boundaries
 
 - Use the actual GitHub source at `rebsiot/drawing-tools-plus` (default branch `main`) and/or the newest verified working ZIP. Handoff notes describe intent but are not code.

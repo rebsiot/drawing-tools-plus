@@ -2,7 +2,8 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import {
   MODULE_ID, DEFAULT_PREFS, normalizePrefs, stylePatch,
-  arrowPoints, arrowDocumentData, duplicateDrawingData, snapshotStyle, shouldStyleNewDrawing, PRESETS
+  arrowPoints, arrowDocumentData, duplicateDrawingData, textDocumentData, drawingLabel,
+  shouldRunDrawingShortcut, snapshotStyle, shouldStyleNewDrawing, PRESETS
 } from '../scripts/model.js';
 
 test('module has a stable independent identifier', () => {
@@ -106,5 +107,50 @@ test('style application is explicitly limited to local, new native drawing creat
   assert.equal(shouldStyleNewDrawing(base), true);
   for (const differences of [{open:false}, {active:false}, {autoStyle:false}, {userId:'player'}, {existingId:'existing'}, {parentId:'other'}, {tool:'select'}, {tool:'drawingQuickbar'}]) {
     assert.equal(shouldStyleNewDrawing({...base, ...differences}), false, JSON.stringify(differences));
+  }
+});
+
+test('text popup model creates one editable native rectangle Drawing with size and color', () => {
+  const data = textDocumentData({x:125.5,y:81.3}, "Hello World", {
+    ...DEFAULT_PREFS, fontSize: 48, textColor: "#abcdef"
+  });
+  assert.equal(data.shape.type, "r");
+  assert.equal(data.text, "Hello World");
+  assert.equal(data.fontSize, 48);
+  assert.equal(data.textColor, "#abcdef");
+  assert.equal(data.x, 126);
+  assert.equal(data.y, 81);
+  assert.equal(data.fillType, 0);
+  assert.equal(data.strokeWidth, 0);
+  assert.ok(data.shape.width > 0 && data.shape.height > 0);
+  assert.equal("_id" in data, false);
+});
+test('text data respects native Drawing size bounds and rejects empty or invalid text', () => {
+  assert.equal(textDocumentData({x:0,y:0}, "   ", DEFAULT_PREFS), null);
+  assert.equal(textDocumentData({x:NaN,y:1}, "Valid", DEFAULT_PREFS), null);
+  assert.equal(textDocumentData({x:0,y:0}, "A".repeat(2001), DEFAULT_PREFS), null);
+  const data = textDocumentData({x:1,y:1},"Hello\nWorld",{fontSize: 300, textColor: "url(javascript:foo)"});
+  assert.equal(data.fontSize, 120);
+  assert.equal(data.textColor, DEFAULT_PREFS.textColor);
+  assert.equal(data.text, "Hello\nWorld");
+  assert.ok(data.shape.height > 120);
+});
+test('Drawing list labels expose native shape and lock state without altering objects', () => {
+  assert.deepEqual(drawingLabel({id:"abc", name:" Grid  ", shape:{type:"p"}, locked:true, text:""}), {
+    kind:"Polygon",name:"Grid",locked:true
+  });
+  assert.equal(drawingLabel({id:"id1", name:"",shape:{type:"r"},text:"hello"}).kind,"Text");
+});
+test('keyboard shortcuts never run in either native text or quickbar text editor', () => {
+  const base = {
+    tool:"select",activeLayer:true,editableTarget:false,nativeEditor:false,
+    quickbarEditor:false,isComposing:false,repeated:false,modified:false
+  };
+  assert.equal(shouldRunDrawingShortcut(base),true);
+  for (const changed of [
+    {tool:"text"},{nativeEditor:true},{quickbarEditor:true},{editableTarget:true},
+    {isComposing:true},{repeated:true},{modified:true},{activeLayer:false}
+  ]) {
+    assert.equal(shouldRunDrawingShortcut({...base,...changed}),false,JSON.stringify(changed));
   }
 });
