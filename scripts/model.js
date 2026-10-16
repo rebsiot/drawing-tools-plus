@@ -225,7 +225,9 @@ export function findSceneDrawings(documents, query = "", limit = 60) {
     if (!needle) return 0;
     const label = String(doc.name ?? "").trim().toLocaleLowerCase();
     const text = String(doc.text ?? "").trim().toLocaleLowerCase();
-    const type = drawingLabel(doc).kind.toLocaleLowerCase();
+    // Text on an ellipse remains an ellipse for shape searches.
+    const shapeName = ({r: "rectangle box", e: "ellipse circle", p: "polygon"})[doc.shape?.type] ?? "";
+    const type = (drawingLabel(doc).kind + " " + shapeName).toLocaleLowerCase();
     const id = String(doc.id ?? "").toLocaleLowerCase();
     if (text === needle) return 0;
     if (label === needle) return 1;
