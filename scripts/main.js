@@ -11,9 +11,11 @@ import {TUTORIAL_STEPS, TUTORIAL_DISMISSED_FLAG, shouldAutoShowTutorial, tutoria
 import {canUseDrawingQuickbar, canSeeDrawing, canChangeDrawing}
   from "./access.js";
 import {toggleNativeDrawingSelection} from "./selection.js";
+import {ribbonVertices, ribbonDrawingData, calloutDrawingData} from "./annotations.js";
 
 const TOOLS = new Set(["select", "rect", "ellipse", "polygon", "freehand", "text"]);
-const KEY_TO_TOOL = {v: "select", r: "rect", e: "ellipse", p: "polygon", f: "freehand", t: "text", a: "arrow"};
+const KEY_TO_TOOL = {v:"select", r:"rect", e:"ellipse", p:"polygon",
+  f:"freehand", t:"text", a:"arrow", l:"line", u:"route", c:"callout"};
 let preferences = normalizePrefs(DEFAULT_PREFS);
 let dock = null;
 let tutorialDialog = null;
@@ -22,6 +24,8 @@ let tutorialShownThisSession = false;
 let arrowOverlay = null;
 let arrowStart = null;
 let arrowPointerId = null;
+let activeGeometryTool = null;
+let routeWaypoints = [];
 let textOverlay = null;
 let textDialog = null;
 let textScene = null;
@@ -77,7 +81,8 @@ function renderStyleInputs() {
   dock.querySelector('[name="arrowHeadShape"]').value = preferences.arrowHeadShape;
   const selected = selectedDrawingObjects();
   const selectedArrow = selected.length === 1 &&
-    canEdit(selected[0]?.document) && isQuickbarArrow(selected[0]?.document);
+    canEdit(selected[0]?.document) && isQuickbarArrow(selected[0]?.document) &&
+    selected[0]?.document?.shape?.type !== "f";
   const selectedPen = selected.length === 1 && selected[0]?.document?.shape?.type === "f";
   const width = dock.querySelector('[name="strokeWidth"]');
   if (width) {
@@ -118,7 +123,9 @@ function synchronizeStyleTarget(selected) {
   const hint = dock.querySelector('[data-role="style-scope"]');
   if (hint) hint.textContent = mode.mode === "single"
     ? (isQuickbarArrow(selected[0]?.document)
-      ? "Arrow appearance: color and opacity. Thickness is set when drawn."
+      ? (selected[0]?.document?.shape?.type === "f"
+          ? "Chevron has open V heads: line color and width remain editable."
+          : "Arrow appearance: color and opacity. Thickness is set when drawn.")
       : selected[0]?.document?.shape?.type === "f"
         ? "Pen stroke: line color and width. Freehand remains unfilled."
         : "Editing this Drawing now. Changes apply immediately.")
@@ -178,7 +185,7 @@ async function flushDirectStylePatch() {
 }
 function refreshToolHighlight() {
   if (!dock) return;
-  const active = textOverlay ? "text" : (arrowOverlay ? "arrow" :
+  const active = textOverlay ? "text" : (arrowOverlay ? activeGeometryTool :
     (canvas?.drawings?.active ? (ui.controls?.tool?.name ?? "select") : null));
   const hasSelection = Boolean(canvas?.drawings?.active && selectedDrawingObjects().length);
   for (const button of dock.querySelectorAll("[data-tool]")) {
@@ -200,6 +207,21 @@ function refreshToolHighlight() {
   // Do not show options for a selected existing arrow or a non-Arrow tool.
   const options = dock.querySelector(".dqb-arrow-options");
   if (options) options.hidden = active !== "arrow";
+  const hint = dock.querySelector(".dqb-geometry-hint");
+  if (hint) {
+    hint.hidden = active !== "route" && active !== "line" && active !== "callout";
+    const label = hint.querySelector("[data-role='geometry-help']");
+    if (label) label.textContent = active === "route"
+      ? "Click waypoints. Double-click or Finish to save; Esc cancels."
+      : active === "callout"
+        ? "Drag from the point of interest to the label position."
+        : "Drag to draw one straight line.";
+    const finish = hint.querySelector('[data-action="finish-route"]');
+    if (finish) {
+      finish.hidden = active !== "route";
+      finish.disabled = routeWaypoints.length < 2;
+    }
+  }
 }
 function dragHeader(root) {
   const header = root.querySelector(".dqb-header");
@@ -233,7 +255,7 @@ function createDock() {
   root.setAttribute("aria-label", "Drawing Quickbar");
   root.innerHTML = `
     <div class="dqb-header">
-      <span><i class="fa-solid fa-pen-ruler" aria-hidden="true"></i> Drawing Quickbar <small>v0.1.15</small></span>
+      <span><i class="fa-solid fa-pen-ruler" aria-hidden="true"></i> Drawing Quickbar <small>v0.1.16</small></span>
       <button type="button" class="dqb-icon" data-action="close" aria-label="Close Drawing Quickbar" title="Close"><i class="fa-solid fa-xmark"></i></button>
     </div>
     <div class="dqb-content">
@@ -245,8 +267,15 @@ function createDock() {
         <button type="button" data-tool="polygon" title="Polygon (P)"><i class="fa-solid fa-draw-polygon"></i><span>Polygon</span></button>
         <button type="button" data-tool="text" title="Text (T)"><i class="fa-solid fa-font"></i><span>Text</span></button>
       </div>
-      <div class="dqb-arrow-tool">
-        <button type="button" data-tool="arrow" title="Draw an arrow by dragging (A)"><i class="fa-solid fa-arrow-right-long"></i> Arrow</button>
+      <div class="dqb-annotation-tools" role="group" aria-label="Lines and annotations">
+        <button type="button" data-tool="line" title="Draw a straight line by dragging (L)"><i class="fa-solid fa-minus"></i><span>Line</span></button>
+        <button type="button" data-tool="arrow" title="Draw an arrow by dragging (A)"><i class="fa-solid fa-arrow-right-long"></i><span>Arrow</span></button>
+        <button type="button" data-tool="route" title="Click route waypoints; double-click, Enter or Finish to save (U)"><i class="fa-solid fa-route"></i><span>Route</span></button>
+        <button type="button" data-tool="callout" title="Drag a pointer then type a label (C)"><i class="fa-regular fa-comment-dots"></i><span>Callout</span></button>
+      </div>
+      <div class="dqb-geometry-hint" hidden>
+        <span data-role="geometry-help"></span>
+        <button type="button" data-action="finish-route" hidden>Finish Route</button>
       </div>
       <div class="dqb-arrow-options" hidden>
         <div class="dqb-section-title">ARROW OPTIONS</div>
@@ -314,7 +343,7 @@ function createDock() {
       </div>
       <label class="dqb-option"><input name="autoStyle" type="checkbox"> Apply my default style to new Drawings</label>
 
-      <div class="dqb-help">Deselect clears selection only. Delete confirms before removing one unlocked Drawing. Arrowhead choices appear while Arrow is active. Undo Style Change only restores appearance.</div>
+      <div class="dqb-help">Deselect clears selection only. Delete confirms before removing one unlocked Drawing. Arrowhead options appear only in Arrow mode; Route uses waypoints. Undo Style Change only restores appearance.</div>
       <div class="dqb-footer"><button type="button" data-action="tutorial" title="Reopen the quick tutorial anytime" aria-label="Open Drawing Quickbar tutorial"><i class="fa-solid fa-circle-question" aria-hidden="true"></i> Tutorial</button></div>
     </div>`;
   document.body.append(root);
@@ -342,6 +371,7 @@ function createDock() {
     }
     if (button.dataset.action === "close") closeDock();
     if (button.dataset.action === "tutorial") showTutorial();
+    if (button.dataset.action === "finish-route") void finishRoute();
     if (button.dataset.action === "deselect-one") {
       // Deselect only changes local selection; it never changes Scene data.
       canvas?.drawings?.get(button.dataset.drawingId)?.release();
@@ -411,6 +441,9 @@ function createDock() {
   dock = root;
   root.querySelector(".dqb-finder").addEventListener("toggle", refreshFinder);
   updateDockInputs();
+  // Keep collapsed All Drawings count accurate before the first expansion.
+  // refreshFinder returns after the inexpensive count update if it is closed.
+  refreshFinder();
 }
 
 /**
@@ -572,12 +605,14 @@ async function selectTool(tool, {toggleSelection = false} = {}) {
     return;
   }
   newDrawingSerial++;
-  if (tool === "arrow" || tool === "text") {
+  if (["arrow", "line", "route", "callout", "text"].includes(tool)) {
+    exitArrow();
+    exitTextPlacement();
     try {
       await ui.controls.activate({control: "drawings", tool: "select"});
       suspendShortcuts = false;
-      if (tool === "arrow") enterArrow();
-      else enterTextPlacement();
+      if (tool === "text") enterTextPlacement();
+      else enterArrow(tool);
     } catch (error) {
       console.error(MODULE_ID + " | Drawing tool activation failed", error);
       notify("Could not activate the drawing tool.", "error");
@@ -1423,6 +1458,13 @@ function onKeydown(event) {
     exitTextPlacement();
     return;
   }
+  if (event.key === "Enter" && activeGeometryTool === "route" && arrowOverlay &&
+      !(event.target instanceof Element &&
+        event.target.closest("input, textarea, select, [contenteditable], [role='textbox']"))) {
+    event.preventDefault();
+    void finishRoute();
+    return;
+  }
   // Foundry's native Text tool listens on document, not necessarily an input.
   const editable = "input, textarea, select, [contenteditable], [role='textbox']";
   const isEditable = el => el instanceof Element && Boolean(el.closest(editable));
@@ -1533,5 +1575,5 @@ Hooks.once("ready", () => {
     // A tool switch or Scene navigation should never leave an invisible input shield over the canvas.
     if (arrowOverlay && !arrowOverlay.contains(event.target) && !dock?.contains(event.target) && !canvas?.drawings?.active) exitArrow();
   });
-  console.info(`${MODULE_ID} | v0.1.15 ready (Foundry v14 native Drawing workflow)`);
+  console.info(`${MODULE_ID} | v0.1.16 ready (Foundry v14 native Drawing workflow)`);
 });
