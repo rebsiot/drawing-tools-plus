@@ -1210,83 +1210,173 @@ function scenePoint(event) {
   if (!Number.isFinite(point.x) || !Number.isFinite(point.y)) throw new Error("Invalid drawing coordinates");
   return {x: point.x, y: point.y};
 }
+/** Render Arrow, Line, Route, or Callout pointer through the same transient overlay. */
 function drawArrowPreview(point) {
   const path = arrowOverlay?.querySelector("path");
-  if (!path || !arrowStart) return;
-  const points = arrowPoints(arrowStart.screen, point,
-    Math.max(14, preferences.strokeWidth * 5), preferences.strokeWidth,
-    preferences.arrowEnds, preferences.arrowHeadShape);
-  path.setAttribute("d", points ? points.map((p, i) => `${i ? "L" : "M"}${p.x.toFixed(1)},${p.y.toFixed(1)}`).join(" ") + " Z" : "");
-  path.setAttribute("fill", preferences.strokeColor);
-  path.setAttribute("stroke", "none");
+  if (!path || !activeGeometryTool) return;
+  let vertices = null, closed = true;
+  if (activeGeometryTool === "route") {
+    if (routeWaypoints.length) {
+      vertices = ribbonVertices([...routeWaypoints.map(entry => entry.screen), point],
+        preferences.strokeWidth);
+    }
+  } else if (arrowStart) {
+    if (activeGeometryTool === "arrow") {
+      vertices = arrowPoints(arrowStart.screen, point,
+        Math.max(14, preferences.strokeWidth * 5), preferences.strokeWidth,
+        preferences.arrowEnds, preferences.arrowHeadShape);
+      closed = preferences.arrowHeadShape !== "chevron";
+    } else vertices = ribbonVertices([arrowStart.screen, point], preferences.strokeWidth);
+  }
+  path.setAttribute("d", vertices
+    ? vertices.map((p, i) => (i ? "L" : "M") +
+        p.x.toFixed(1) + "," + p.y.toFixed(1)).join(" ") + (closed ? " Z" : "")
+    : "");
+  path.setAttribute("fill", closed ? preferences.strokeColor : "none");
+  path.setAttribute("stroke", closed ? "none" : preferences.strokeColor);
+  path.setAttribute("stroke-width", String(preferences.strokeWidth));
 }
+
 function resetArrowPointer() {
   arrowStart = null;
   arrowPointerId = null;
   const path = arrowOverlay?.querySelector("path");
   if (path) path.setAttribute("d", "");
 }
-function enterArrow() {
+
+/** Save one native Drawing, including native creation history when available. */
+async function saveAnnotation(data, sceneId, caption = "Drawing") {
+  if (!data || !isUsable() || !canvas.drawings.active ||
+      canvas.scene?.id !== sceneId) return;
+  try {
+    const created = await canvas.scene.createEmbeddedDocuments("Drawing", [data]);
+    if (!created?.length) throw new Error("Foundry returned no new Drawing");
+    try { canvas.drawings.storeHistory("create", created.map(d => d.toObject())); }
+    catch (error) { console.debug(MODULE_ID + " | Native Drawing undo unavailable", error); }
+    selectCreatedDrawing(created[0].id, sceneId);
+  } catch (error) {
+    console.error(MODULE_ID + " | " + caption + " creation failed", error);
+    notify("Could not save " + caption + ". See console.", "error");
+  }
+}
+
+/** A Route is an editable native Drawing; click multiple points, then finish. */
+async function finishRoute() {
+  if (activeGeometryTool !== "route" || routeWaypoints.length < 2) {
+    return notify("Choose at least two Route waypoints first.");
+  }
+  const points = routeWaypoints.map(entry => entry.scene);
+  const sceneId = canvas.scene?.id;
+  const data = ribbonDrawingData(points, preferences, "route");
+  exitArrow();
+  await saveAnnotation(data, sceneId, "Route");
+}
+
+function enterArrow(tool = "arrow") {
   if (!dock || !isUsable() || !canvas.drawings.active) return;
+  if (!["arrow", "line", "route", "callout"].includes(tool)) return;
   exitArrow();
   const board = boardElement();
   if (!board) return notify("Cannot locate the Foundry canvas.", "error");
+  activeGeometryTool = tool;
+  routeWaypoints = [];
   arrowOverlay = document.createElement("div");
   arrowOverlay.id = "dqb-arrow-overlay";
-  arrowOverlay.title = "Drag an arrow on the map; press Esc to leave Arrow mode";
+  arrowOverlay.title = tool === "route"
+    ? "Click route waypoints, double-click or Enter to finish, right-click or Esc to cancel"
+    : tool === "callout"
+      ? "Drag from a map point to a label location; type text to save"
+      : "Drag on the map; Esc to cancel";
   arrowOverlay.innerHTML = '<svg xmlns="http://www.w3.org/2000/svg" aria-hidden="true" preserveAspectRatio="none"><path d="" fill="none" stroke-linecap="round" stroke-linejoin="round"/></svg>';
   document.body.append(arrowOverlay);
   updateArrowBounds();
-  arrowOverlay.addEventListener("contextmenu", event => { event.preventDefault(); exitArrow(); refreshToolHighlight(); });
+  arrowOverlay.addEventListener("contextmenu", event => {
+    event.preventDefault();
+    exitArrow();
+  });
   arrowOverlay.addEventListener("pointerdown", event => {
     if (event.button !== 0) return;
     if (!canvas.drawings.active || !canvas.scene) return exitArrow();
     updateArrowBounds();
+    if (activeGeometryTool === "route") {
+      event.preventDefault();
+      if (event.detail >= 2) {
+        if (routeWaypoints.length >= 2) void finishRoute();
+        return;
+      }
+      try {
+        if (routeWaypoints.length >= 80) return notify("A Route supports up to 80 waypoints.");
+        routeWaypoints.push({screen: screenPoint(event), scene: scenePoint(event)});
+        drawArrowPreview(screenPoint(event));
+        refreshToolHighlight();
+      } catch (error) {
+        console.error(MODULE_ID + " | Route waypoint failed", error);
+        notify("Cannot place this Route waypoint.", "error");
+      }
+      return;
+    }
     try {
       arrowStart = {screen: screenPoint(event), scene: scenePoint(event), sceneId: canvas.scene.id};
       arrowPointerId = event.pointerId;
       arrowOverlay.setPointerCapture?.(event.pointerId);
       event.preventDefault();
     } catch (error) {
-      console.error(`${MODULE_ID} | Cannot start arrow`, error);
-      notify("Arrow coordinates are unavailable.", "error");
+      console.error(MODULE_ID + " | Cannot start " + activeGeometryTool, error);
+      notify("Map coordinates are unavailable.", "error");
       resetArrowPointer();
     }
   });
   arrowOverlay.addEventListener("pointermove", event => {
-    if (arrowStart && event.pointerId === arrowPointerId) drawArrowPreview(screenPoint(event));
+    if (activeGeometryTool === "route") {
+      if (routeWaypoints.length) drawArrowPreview(screenPoint(event));
+    } else if (arrowStart && event.pointerId === arrowPointerId) {
+      drawArrowPreview(screenPoint(event));
+    }
   });
   arrowOverlay.addEventListener("pointercancel", resetArrowPointer);
+  arrowOverlay.addEventListener("dblclick", event => {
+    if (activeGeometryTool === "route" && routeWaypoints.length >= 2) {
+      event.preventDefault();
+      void finishRoute();
+    }
+  });
   arrowOverlay.addEventListener("pointerup", async event => {
-    if (!arrowStart || event.pointerId !== arrowPointerId) return;
+    if (activeGeometryTool === "route" || !arrowStart || event.pointerId !== arrowPointerId) return;
     const initial = arrowStart;
+    const toolKind = activeGeometryTool;
     const finish = screenPoint(event);
     resetArrowPointer();
     if (Math.hypot(finish.x - initial.screen.x, finish.y - initial.screen.y) < 8) return;
     if (!canvas.scene || canvas.scene.id !== initial.sceneId || !canvas.drawings.active) return;
     try {
       const end = scenePoint(event);
-      const data = arrowDocumentData(initial.scene, end, preferences);
-      if (!data) return;
-      const created = await canvas.scene.createEmbeddedDocuments("Drawing", [data]);
-      if (created?.length) {
-        // Enter the native drawing undo history when supported by this Foundry build.
-        try { canvas.drawings.storeHistory("create", created.map(d => d.toObject())); }
-        catch (error) { console.debug(`${MODULE_ID} | Native arrow undo registration unavailable`, error); }
+      if (toolKind === "callout") {
+        textScene = {sceneId: initial.sceneId, calloutStart: initial.scene,
+          position: end, kind: "callout"};
         exitArrow();
-        selectCreatedDrawing(created[0].id, canvas.scene.id);
+        showTextDialog(event.clientX, event.clientY);
+        return;
       }
+      const data = toolKind === "arrow"
+        ? arrowDocumentData(initial.scene, end, preferences)
+        : ribbonDrawingData([initial.scene, end], preferences, "line");
+      exitArrow();
+      await saveAnnotation(data, initial.sceneId, toolKind === "arrow" ? "Arrow" : "Line");
     } catch (error) {
-      console.error(`${MODULE_ID} | Arrow creation failed`, error);
-      notify("Could not save arrow. See console; no existing drawings were modified.", "error");
+      console.error(MODULE_ID + " | " + toolKind + " creation failed", error);
+      notify("Could not create " + toolKind + ". See console.", "error");
+      exitArrow();
     }
   });
   refreshToolHighlight();
 }
+
 function exitArrow() {
   resetArrowPointer();
+  routeWaypoints = [];
   arrowOverlay?.remove();
   arrowOverlay = null;
+  activeGeometryTool = null;
   refreshToolHighlight();
 }
 
