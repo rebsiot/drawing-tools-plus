@@ -8,6 +8,22 @@
 **Status:** 11/11 automated/mock tests passed; **live Foundry test not yet performed**. No official Foundry package publication has occurred.
 **Code provenance:** first source import from the 0.1.0 ZIP; metadata/documentation/CI additions only, not a tested functionality upgrade.
 
+## 16.2 — v0.1.18 Multi-Delete public beta (2026-10-16)
+
+**Request:** Add Multi-Delete and publish it immediately to the existing GitHub repository. A future Free/Patreon split is an idea only; **do not close or rename this repository or change the module ID**. The v0.1.18 milestone is a public beta, built by GitHub Actions as a complete version-pinned ZIP.
+
+**Source:** Complete Foundry v14 module ZIP v0.1.17 obtained from GitHub Actions for main commit `ce9480d8813101f011fb5826bf30693b47738da0`.
+
+**Implemented:** Selected Drawings includes **Delete N Selected** when two or more native controlled Drawings have delete permission. Native v14 class-bound `DialogV2.confirm` lists each intended name/kind/native ID and excluded locked/no-permission items. A confirmed operation rechecks Scene, selection, all planned target document identities, current locks, authors and native `canUserModify(delete)` before passing exact IDs to `Scene.deleteEmbeddedDocuments("Drawing", ids)`. No scene-wide select/delete, no permission bypass, no automatic unlock, no silent world migration. Partial server response is reported; style-only undo never promises to restore deleted art.
+
+**Protection/UX:** Preserve All Drawings above Selected Drawings, stable additive selection without row movement, direct single-item Delete/Deselect, Locate, locked gridline inspection, player ownership, Token Controls quick return and shape styling. Existing v0.1.17 player reports confirmed intuitive creation, outline/fill styling, deletion and locked-object recognition; the *new* bulk delete awaits live testing.
+
+**Install:** Back up world and existing module. Use the permanent Foundry manifest `https://raw.githubusercontent.com/rebsiot/drawing-tools-plus/main/module.json` for v0.1.18 updates after publication, or stop Foundry; extract the versioned ZIP under `Z:\Data\modules\foundry-drawing-quickbar\`, restart/hard-refresh. For rollback restore the v0.1.17 module ZIP/folder, and restore a matching world snapshot if any Drawing documents were deleted.
+
+**Next test:** In a disposable Scene create four unlocked Drawings and one locked gridline. Select three, Cancel multi-delete (no changes), then confirm deletion (exactly three removed). Try player-owned vs GM art. Verify All Drawings scroll/Locate/locks and token-switch UX unchanged. Run live Foundry v14 test before claiming release-quality functionality.
+
+**Thread owner:** Drawing Tools+ `16.K`, handoff: `docs/16-DRAWING-TOOLS-PLUS-HANDOFF.md`. Global architecture contracts unchanged. No repository, module ID, update URL or installation contract migration has occurred.
+
 ## 16.2 — v0.1.17 Token Controls return (2026-10-16)
 
 Reported bug: Selecting a shape activates native Drawing Controls; token manipulation is unavailable after leaving the Quickbar. This is a control navigation issue.

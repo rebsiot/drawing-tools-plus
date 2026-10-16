@@ -535,3 +535,24 @@
   text-align: center;
   justify-content: center;
 }
+
+/* v0.1.18: destructive action is visually separate, never a replacement for Deselect. */
+#foundry-drawing-quickbar .dqb-selection .dqb-actions .dqb-batch-delete {
+  grid-column: 1 / -1;
+  color: #ffe3e3;
+  border-color: #ad6464;
+  background: #55323a;
+}
+#foundry-drawing-quickbar .dqb-selection .dqb-actions .dqb-batch-delete[hidden] { display:none; }
+.dqb-delete-targets, .dqb-delete-skipped {
+  max-height: 220px;
+  overflow-y: auto;
+  padding: 5px 12px 5px 29px;
+  background: rgba(100, 110, 125, .1);
+  border: 1px solid rgba(140, 140, 140, .3);
+}
+.dqb-delete-targets li, .dqb-delete-skipped li {
+  margin: 3px 0;
+  overflow-wrap: anywhere;
+}
+.dqb-delete-targets code, .dqb-delete-skipped code { font-size: .82em; }

@@ -1,5 +1,13 @@
 # Drawing Tools+ — Changelog
 
+## v0.1.18 — Multi-Delete (public beta; 2026-10-16)
+- **Added:** **Delete N Selected** under Selected Drawings, available with at least two deletable native Drawings in the current selection. Its button is distinct from per-object Deselect/Delete.
+- **Safety:** Native Foundry DialogV2 confirms an explicit list of targets (name, kind, native ID) and indicates locked or unauthorized exclusions. Cancel and dialog dismissal make no changes. Confirmed deletion aborts if Scene, selection, document identity, author, lock or deletion permission changed. Deletion uses one native Scene Drawing operation for the exact authorized IDs.
+- **Permission preservation:** Players can delete only their own unlocked Drawings when Foundry permits deleting. GMs cannot bulk-delete locked gridlines without deliberately unlocking them first. No select-all, mass import, migration or changes to existing Scene documents on install.
+- **Distribution:** Published as a complete versioned public GitHub beta ZIP through the existing repository and permanent Foundry update manifest; no Free/Plus split is implemented. Previous v0.1.17 ZIP remains available for rollback.
+- **Verification:** Node/unit/mock/static checks plus package verification. Live Foundry v14 Multi-Delete is unverified; earlier player reports confirmed basic creation, styling, single removal and locked-object discoverability in v0.1.17.
+
+
 Short summaries of changes you can see in Foundry. See the [test report](docs/TEST-REPORT.md) for technical verification.
 
 ## v0.1.17 — Return to Tokens from Drawing Quickbar

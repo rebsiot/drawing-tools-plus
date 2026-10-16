@@ -1,6 +1,16 @@
-# Test Report — Drawing Quickbar v0.1.17
+# Test Report — Drawing Quickbar v0.1.18
 
 **Date:** 2026-10-16
+
+## v0.1.18 — Multi-Delete (2026-10-16)
+
+**Baseline:** Complete versioned v0.1.17 module ZIP recovered from the successful GitHub Actions validation artifact; no speculative recreation of prior source. Existing module ID and native permissions retained.
+
+**New behavior:** Separate Delete N Selected action beside existing selection tools; native DialogV2 confirmation enumerates each intended Drawing by name/type/ID, displays skipped locked/no-permission selections, then atomically requests exactly the approved eligible IDs through native Scene.deleteEmbeddedDocuments. The pending dialog cannot repeat batch deletion. Recheck entire selection, scene reference, each Drawing identity, lock, author and server delete permission immediately before sending the request. Partial responses are reported rather than claiming complete deletion. No automatic unlock or delete-all.
+
+**Automated:** Local Node.js 22 test run: **90 passed, 0 failed** (previous 80 baseline tests plus updated metadata and new coverage). Tests exercise batch planning, runtime guards, native deletion request IDs, HTML escaping (including hidden GM data), player author/deletion permission and GM locked-gridline safeguards; existing model/selection/UI tests also passed. Syntax checks passed for every JavaScript module. Complete ZIP and clean extracted-ZIP tests verified after building. Live Foundry v14 is **not yet verified** for Multi-Delete.
+
+**Distribution:** Public v0.1.18 beta as a version-pinned ZIP through GitHub Actions. The stable Foundry update manifest points to the matching ZIP after successful release publication and main merge. v0.1.17 remains rollback; a world snapshot is required to reverse actual Drawing deletions.
 
 ## v0.1.17 — Return to Tokens (2026-10-16)
 - User-reported issue: native Drawings layer stays active when leaving Drawing Quickbar, preventing token manipulation.

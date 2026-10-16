@@ -12,6 +12,8 @@ import {canUseDrawingQuickbar, canSeeDrawing, canChangeDrawing}
   from "./access.js";
 import {toggleNativeDrawingSelection} from "./selection.js";
 import {ribbonVertices, ribbonDrawingData, calloutDrawingData} from "./annotations.js";
+import {planSelectedDrawingDeletion, isDrawingDeletionPlanCurrent,
+  commitPlannedDrawingDeletion, drawingDeletionConfirmationHtml} from "./batch-delete.js";
 
 const TOOLS = new Set(["select", "rect", "ellipse", "polygon", "freehand", "text"]);
 const KEY_TO_TOOL = {v:"select", r:"rect", e:"ellipse", p:"polygon",
@@ -31,6 +33,7 @@ let textDialog = null;
 let textScene = null;
 let suspendShortcuts = false;
 let lastStyleUndo = null;
+let batchDeletePending = false;
 let focusedDrawingId = null;
 let focusedSceneId = null;
 let focusMarker = null;
@@ -256,7 +259,7 @@ function createDock() {
   root.setAttribute("aria-label", "Drawing Quickbar");
   root.innerHTML = `
     <div class="dqb-header">
-      <span class="dqb-header-title"><i class="fa-solid fa-pen-ruler" aria-hidden="true"></i> Drawing Quickbar <small>v0.1.17</small></span>
+      <span class="dqb-header-title"><i class="fa-solid fa-pen-ruler" aria-hidden="true"></i> Drawing Quickbar <small>v0.1.18</small></span>
       <div class="dqb-header-actions">
         <button type="button" class="dqb-to-tokens" data-action="tokens" aria-label="Return to Token Controls" title="Return to Token Controls; keep Quickbar open"><i class="fa-solid fa-arrow-pointer" aria-hidden="true"></i> Tokens</button>
         <button type="button" class="dqb-icon" data-action="close" aria-label="Close Drawing Quickbar" title="Close and return to Tokens"><i class="fa-solid fa-xmark"></i></button>
@@ -325,6 +328,7 @@ function createDock() {
           <button type="button" data-action="edit-text" title="Edit the text on exactly one selected, unlocked native drawing"><i class="fa-solid fa-pen-to-square"></i> Edit Text</button>
           <button type="button" data-action="apply-selected" title="Only for multiple selections: apply the chosen style to unlocked Drawings"><i class="fa-solid fa-paintbrush"></i> Apply to All Selected</button>
           <button type="button" data-action="undo-style" title="Undo the most recent Quickbar appearance change only; not movement, text edits or deletion"><i class="fa-solid fa-rotate-left"></i> Undo Style Change</button>
+          <button type="button" class="dqb-batch-delete" data-action="delete-selected" title="Delete two or more selected unlocked Drawings after review and confirmation" disabled hidden><i class="fa-solid fa-trash-can" aria-hidden="true"></i> Delete Selected</button>
         </div>
         <div class="dqb-selected-list" aria-live="polite"></div>
       </section>
@@ -383,6 +387,7 @@ function createDock() {
       refreshSelectedPanel();
     }
     if (button.dataset.action === "delete-one") await deleteOneDrawing(button.dataset.drawingId);
+    if (button.dataset.action === "delete-selected") await deleteSelectedDrawings();
     if (button.dataset.action === "unlock-one") await unlockDrawing(button.dataset.drawingId);
     if (button.dataset.action === "locate-one") await locateDrawing(button.dataset.drawingId);
     if (button.dataset.action === "inspect-one") inspectLockedDrawing(button.dataset.drawingId);
@@ -797,6 +802,14 @@ function refreshSelectedPanel() {
   lockButton.hidden = !game.user.isGM;
   lockButton.disabled = !game.user.isGM || !editable.length;
   dock.querySelector('[data-action="duplicate-selected"]').disabled = !editable.length;
+  const deletable = selected.filter(item => canDelete(item.document));
+  const deleteSelectedButton = dock.querySelector('[data-action="delete-selected"]');
+  deleteSelectedButton.hidden = selected.length < 2;
+  deleteSelectedButton.disabled = batchDeletePending || deletable.length < 2;
+  deleteSelectedButton.innerHTML = `<i class="fa-solid fa-trash-can" aria-hidden="true"></i> ` +
+    (deletable.length >= 2 ? `Delete ${deletable.length} Selected` : "Delete Selected");
+  deleteSelectedButton.title = `${deletable.length} may be deleted; ${selected.length - deletable.length} ` +
+    "locked or unauthorized selected Drawings will remain. Confirmation required.";
   for (const action of ["edit-text", "open-properties"]) {
     dock.querySelector('[data-action="' + action + '"]').disabled =
       selected.length !== 1 || editable.length !== 1;
@@ -1069,6 +1082,69 @@ async function deleteOneDrawing(id) {
     notify("Could not delete Drawing. See console.", "error");
   }
 }
+/**
+ * Multi-Delete touches only explicitly selected, currently deletable native
+ * Drawings. All targets appear in a confirmation; any changes to the scene,
+ * selection, author or lock state abort the entire operation before writing.
+ */
+async function deleteSelectedDrawings() {
+  if (batchDeletePending || !isUsable() || !canvas.drawings.active) return;
+  const scene = canvas.scene;
+  const plan = planSelectedDrawingDeletion(selectedDrawingObjects(), game.user, scene.id);
+  if (plan.targets.length < 2)
+    return notify("Select at least two unlocked Drawings you have permission to delete.");
+  const DialogV2 = foundry?.applications?.api?.DialogV2;
+  if (typeof DialogV2?.confirm !== "function")
+    return notify("Native confirmation unavailable. Nothing was deleted.", "error");
+  batchDeletePending = true;
+  refreshSelectedPanel();
+  try {
+    let approved;
+    try {
+      approved = await DialogV2.confirm({
+        window: {title: `Delete ${plan.targets.length} Selected Drawings?`},
+        content: drawingDeletionConfirmationHtml(plan, game.user, drawingLabel),
+        yes: {label: `Delete ${plan.targets.length} Drawings`},
+        no: {label: "Cancel"},
+        modal: true,
+        rejectClose: false
+      });
+    } catch (error) {
+      console.error(`${MODULE_ID} | Multi-Delete confirmation failed`, error);
+      return notify("Multi-Delete confirmation failed. Nothing was deleted.", "error");
+    }
+    if (approved !== true) return;
+    // Any style write started before the confirmation must settle first.
+    await flushDirectStylePatch();
+    if (!isUsable() || canvas.scene !== scene || !canvas.drawings.active ||
+        !isDrawingDeletionPlanCurrent(plan, scene, selectedDrawingObjects(), game.user))
+      return notify("Selection, Scene or permissions changed. Nothing was deleted.");
+    const result = await commitPlannedDrawingDeletion(
+      plan, scene, selectedDrawingObjects(), game.user);
+    if (result.status === "stale")
+      return notify("Drawing permissions or selection changed. Nothing was deleted.");
+    if (result.deletedIds.length && lastStyleUndo?.sceneId === scene.id) {
+      const deleted = new Set(result.deletedIds);
+      const keep = lastStyleUndo.documents.filter(d => !deleted.has(d._id));
+      lastStyleUndo = keep.length ? {...lastStyleUndo, documents: keep} : null;
+    }
+    if (result.status === "partial") {
+      notify(`Deleted ${result.deletedIds.length} of ${result.expected} Drawings. ` +
+        "Check the Scene and console; the rest were not confirmed deleted.", "warn");
+    } else {
+      notify(`Deleted ${result.deletedIds.length} selected Drawings. ` +
+        `${plan.excluded.length} protected or unauthorized Drawing(s) skipped.`, "info");
+    }
+    refreshFinder();
+  } catch (error) {
+    console.error(`${MODULE_ID} | Native Multi-Delete failed`, error);
+    notify("Multi-Delete failed. Check the Scene and console before trying again.", "error");
+  } finally {
+    batchDeletePending = false;
+    refreshSelectedPanel();
+  }
+}
+
 async function unlockDrawing(id) {
   // Only a GM may unlock permanent map elements.
   if (!isUsable() || !game.user.isGM)
@@ -1704,5 +1780,5 @@ Hooks.once("ready", () => {
     // A tool switch or Scene navigation should never leave an invisible input shield over the canvas.
     if (arrowOverlay && !arrowOverlay.contains(event.target) && !dock?.contains(event.target) && !canvas?.drawings?.active) exitArrow();
   });
-  console.info(`${MODULE_ID} | v0.1.17 ready (Foundry v14 native Drawing workflow)`);
+  console.info(`${MODULE_ID} | v0.1.18 ready (Foundry v14 native Drawing workflow)`);
 });

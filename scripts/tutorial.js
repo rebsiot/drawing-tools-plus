@@ -14,7 +14,7 @@ export const TUTORIAL_STEPS = Object.freeze([
   }),
   Object.freeze({
     title: "Find and protect your map art",
-    body: "In All Drawings, use search or Locked only to find markings. A red lock icon shows protected art; the GM can Unlock or inspect it in this same list. Select several unlocked Drawings or Deselect one; players can edit only their own. Delete asks for confirmation."
+    body: "In All Drawings, use search or Locked only to find markings. Red locks mark protected art. Select several Drawings, then Delete N Selected to review an exact list before confirming. Locked/unauthorized items are skipped. Deselect never deletes. Players can delete only their own unlocked Drawings."
   }),
   Object.freeze({
     title: "Arrows, undo and getting help",
