@@ -154,6 +154,24 @@ v0.1.3 supersedes v0.1.2 and places the Selected Drawings inspector/Lock actions
 
 **Status:** v0.1.10 beta is subject to automated/mock CI and real v14 verification. Owning handoff remains `docs/16-DRAWING-TOOLS-PLUS-HANDOFF.md`; no shared data contract changes.
 
+## 16.1 update — v0.1.11: player ownership, freehand Pen and compact UI (2026-10-16)
+
+**User requests:** Allow players to draw/edit/delete their own Shapes/Pen/Arrows/Text; protect GM/other-player/locked Drawings; preserve GM access and tutorial. Live UI feedback: Pen creates a closed filled shape instead of a freeform open line; native selection is hard to clear; locked Drawings cannot be selected; the Quickbar is too tall and selected-object details get separated from action buttons. Specifically put the six primary tool buttons in one row and remove whitespace between Line width, Fill opacity and Text size.
+
+**Source baseline:** v0.1.10 published main SHA `f037c4b0ba9897e16e6e66caf3c94db673b19e82`, with later CI upgrade; v0.1.11 work is in a separate commit chain and must pass CI before the manifest advances.
+
+**Implementation:**
+- New `scripts/access.js` uses native v14 `game.user.can("DRAWING_CREATE")`, immutable Drawing `author` IDs, `DrawingDocument.canUserModify(user, "update"/"delete")`, and locked/hidden guards. GM retains authority to edit all **unlocked** Drawings, explicitly unlocking protected artwork first. Players can edit/delete only native-author-owned unlocked Drawings. Read-only/hidden list states are filtered; GM-only Lock/Unlock remain restricted. Checks occur at input, immediately before native update/create, and after the single-ID Delete confirmation. No custom permission flag or world-role mutation.
+- Player launchers appear in Tokens and Drawings when Use Drawing Tools is enabled. Both GM and player get the same opt-out tutorial per Foundry User document.
+- Native freehand Pen is always patched to `fillType:0, fillAlpha:0` during local preCreate, even when Apply Default Style is disabled. Generic style presets on native `shape.type:"f"` retain stroke but not fill; Pen fill controls disabled. Saved pen IDs, points and geometry are unchanged.
+- The first six tools (Select/Pen/Box/Circle/Polygon/Text) form one grid row, Arrow directly below. Select toggles visual `Unselect` while native selection exists; mouse click releases all locally controlled Drawings, without document updates. Keyboard `V` activates native Select but does not toggle deselection. Selection hooks refresh state.
+- Selected Drawing list moves below Lock/Properties/Duplicate/Edit Text/Apply/Undo controls. CSS lowers section spacing and the row gaps for Line width, Fill opacity and Text size.
+- Native locked Drawings are intentionally not selectable/editable while locked. The GM can locate and use a small read-only Info dialog (type, ID, position, dimensions, author, text), or explicitly Unlock first. No migration or layers duplicated.
+
+**Verification needed:** CI unit/static/mock tests and release ZIP integrity. Live v14 GM/Player roles: enable Use Drawing Tools; Player creates freehand open path with Filled preset, verifies no fill and persistence, edits/deletes only authored Drawing; cannot touch GM/other-player/locked grid art. Select/Unselect toggle, compact UI, locked Info, native token/drawing controls and arrow/Text regression. Back up world before testing. Do not call static checks live validation.
+
+**Owned handoff:** `docs/16-DRAWING-TOOLS-PLUS-HANDOFF.md`. Foundry v14, independent `foundry-drawing-quickbar` v0.1.11, same manifest and restrictive license. No adjacent module changes. Outstanding Background/Working layer-grouping design remains Issue #1.
+
 ## Source of truth and GitHub release boundaries
 
 - Use the actual GitHub source at `rebsiot/drawing-tools-plus` (default branch `main`) and/or the newest verified working ZIP. Handoff notes describe intent but are not code.

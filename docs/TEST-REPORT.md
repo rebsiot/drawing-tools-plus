@@ -1,6 +1,13 @@
-# Test Report — Drawing Quickbar v0.1.10
+# Test Report — Drawing Quickbar v0.1.11
 
 **Date:** 2026-10-16
+
+## v0.1.11 — Player permissions, compact controls and Pen fixes (2026-10-16)
+
+**Source:** Native v14 Drawing and User APIs. Existing published v0.1.10 source; changes in isolated v0.1.11 commit chain.
+**Automated checks:** Native user.can(DRAWING_CREATE) launcher access; author equality, separate canUserModify update/delete and locked/hidden/unauthorized exclusions; repeated write/delete permission checks; styling pen never fills a native freehand path; Fill controls disabled on selected Pen; source-level UI assertions of six-button row, Arrow below, selected list after actions, tight slider gaps, Select/Unselect toggle without edits, locked Drawing read-only Info.
+**Non-destructive:** No world permission changes, document conversions, mass actions, auto unlock, importing existing records or Scene/Actor/Token migrations.
+**Pending live:** v14 Pen renderer preview and persistence, real author permission changes/roles, styled and protected GM artwork, button visual state, locked Info modal behavior and responsive CSS. Report exact Foundry build and first error.
 
 ## v0.1.10 — First-Use GM Tutorial (2026-10-16)
 

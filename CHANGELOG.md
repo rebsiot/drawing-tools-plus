@@ -2,6 +2,16 @@
 
 Short summaries of changes you can see in Foundry. See the [test report](docs/TEST-REPORT.md) for technical verification.
 
+## v0.1.11 — Player Drawings, Pen Fix and a Smaller Toolbar
+- **New:** Player-accessible Quickbar when the GM enables Foundry's **Use Drawing Tools** permission. A player can manage **their own unlocked** Drawings only; all writes recheck native author and update/delete permissions. GM control remains.
+- **Fixed:** Pen paths remain **unfilled open freehand strokes**. The Quickbar ignores fill presets for freehand shapes and disables Fill controls on selected Pen paths.
+- **Changed:** Six creation/selection tools now share **one compact row**; Arrow is immediately below.
+- **Changed:** The **Select** button highlights and reads **Unselect** while a Drawing is selected; clicking it releases the native selection, never deletes or restyles. `V` remains Select.
+- **Changed:** Selected-Drawing details appear **below** their action buttons. **Line width, Fill opacity and Text size** use much tighter vertical spacing.
+- **Improved:** The GM can **Locate** or view read-only **Info** for locked Drawings without unlocking or modifying map artwork.
+- **Preserved:** Module ID, native Drawing data, immutable author IDs, locked gridlines, first-use tutorial, and all existing release artifacts.
+- **Testing:** Node/mock/static checks only until separately verified in Foundry v14.
+
 ## v0.1.10 — Quick First-Use Tutorial
 - **New:** Four short steps appear the first time a GM opens Drawing Quickbar—not simply when they log into Foundry.
 - **New:** **Don't Show Again** at the end saves the preference on that GM's Foundry User account, across future sessions and browsers in the same world.
