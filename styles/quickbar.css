@@ -343,3 +343,71 @@
 #dqb-tutorial button[hidden] { display: none; }
 #dqb-tutorial button:disabled { opacity: .55; cursor: wait; }
 #dqb-tutorial button:focus-visible { outline: 3px solid #e9cd8c; outline-offset: 2px; }
+
+/* v0.1.11 compact layout: first six drawing tools on one row, Arrow below. */
+#foundry-drawing-quickbar .dqb-content { padding: 8px 10px; }
+#foundry-drawing-quickbar .dqb-tools {
+  grid-template-columns: repeat(6, minmax(0, 1fr));
+  gap: 4px;
+}
+#foundry-drawing-quickbar .dqb-tools button {
+  height: 46px;
+  padding: 4px 1px;
+  font-size: 10px;
+  line-height: 1.15;
+  gap: 4px;
+}
+#foundry-drawing-quickbar .dqb-tools button i { font-size: 16px; }
+#foundry-drawing-quickbar .dqb-arrow-tool { margin-top: 5px; }
+#foundry-drawing-quickbar .dqb-arrow-tool button {
+  width: 100%; min-height: 30px;
+  padding: 5px 8px; font-size: 11px;
+  display: flex; align-items: center; justify-content: center; gap: 8px;
+}
+#foundry-drawing-quickbar .dqb-arrow-tool button.active {
+  color: #161a1f; background: #edc777; border-color: #f6d99e;
+}
+#foundry-drawing-quickbar .dqb-section-title { margin: 9px 0 4px; }
+#foundry-drawing-quickbar .dqb-selection { margin-top: 6px; padding-bottom: 7px; }
+#foundry-drawing-quickbar .dqb-selection .dqb-actions { gap: 4px; }
+#foundry-drawing-quickbar .dqb-selection .dqb-actions button {
+  padding: 5px 4px; font-size: 11px;
+}
+#foundry-drawing-quickbar .dqb-selected-list {
+  max-height: 100px;
+  overflow-y: auto;
+  padding: 3px 0 2px;
+  margin-top: 5px;
+}
+#foundry-drawing-quickbar .dqb-selected-list .dqb-object-row { padding: 3px 0; }
+#foundry-drawing-quickbar .dqb-locked,
+#foundry-drawing-quickbar .dqb-finder { margin-top: 6px; }
+#foundry-drawing-quickbar .dqb-style-scope {
+  margin: 2px 0 6px; padding: 4px 6px;
+}
+#foundry-drawing-quickbar .dqb-presets button {
+  padding: 6px 3px;
+}
+/* Compact Line width / Fill opacity / Text size rows without shrinking sliders. */
+#foundry-drawing-quickbar .dqb-fields {
+  row-gap: 5px;
+  column-gap: 8px;
+  padding: 8px 0 4px;
+}
+#foundry-drawing-quickbar .dqb-fields label.dqb-wide {
+  row-gap: 1px;
+  column-gap: 6px;
+  line-height: 1.15;
+}
+#foundry-drawing-quickbar .dqb-fields .dqb-wide strong {
+  font-size: 11px;
+}
+#foundry-drawing-quickbar .dqb-fields .dqb-wide input[type="range"] {
+  height: 14px; margin: 0;
+}
+#foundry-drawing-quickbar .dqb-option { padding: 6px 0 7px; }
+#foundry-drawing-quickbar .dqb-help { margin-top: 7px; }
+@media (max-width: 380px) {
+  #foundry-drawing-quickbar .dqb-tools { gap: 3px; }
+  #foundry-drawing-quickbar .dqb-tools button { font-size: 9px; }
+}
