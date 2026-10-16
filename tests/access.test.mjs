@@ -64,7 +64,7 @@ test("Quickbar source rechecks authorship for every edit, undo and Delete confir
   assert.match(src,/function canDelete\(doc\) \{ return canChangeDrawing\(game\?\.user, doc, "delete"\); \}/);
   assert.match(src,/sceneDrawingDocuments\(\) \{[\s\S]*?all\.filter\(doc => canSeeDrawing\(game\?\.user, doc\)\)/);
   assert.match(src,/const editable = selected\.filter\(item => canEdit\(item\.document\)\)/);
-  assert.match(src,/selected\.map\(item => item\.document\)\.filter\(canEdit\)/);
+  assert.match(src,/all\.map\(item => item\.document\)\.filter\(canEdit\)/);
   assert.match(src,/if \(!canEdit\(doc\)\) return/);
   assert.match(src,/if \(!canDelete\(doc\)\) return notify/);
   assert.match(src,/scene\.drawings\.get\(id\) !== doc \|\| !canDelete\(doc\)/);

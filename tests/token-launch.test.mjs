@@ -21,7 +21,8 @@ test("Drawing actions can switch from Tokens only after an explicit click", asyn
   assert.match(source, /if \(!canvas\.drawings\.active\) await ui\.controls\.activate\(\{control: "drawings", tool: "select"\}\)/);
   assert.match(source, /if \(button\.dataset\.action === "select-only"\) await selectOnlyDrawing/);
   assert.match(source, /if \(button\.dataset\.action === "edit-one-text"\) await beginEditDrawingText/);
-  assert.match(source, /async function unlockDrawing\(id\) \{\s*\/\/ Explicit Unlock works from either control menu/);
+  assert.match(source, /async function unlockDrawing\(id\) \{\s*\/\/ Only a GM may unlock permanent map elements/);
+  assert.match(source, /if \(!isUsable\(\) \|\| !game\.user\.isGM\)/);
   assert.match(source, /async function locateDrawing\(id\)/);
   assert.ok(!source.includes('controls.tokens.tools.select ='), "Do not replace native Token selection");
   assert.ok(!source.includes('canvas.ping('), "Locate remains local to the GM");

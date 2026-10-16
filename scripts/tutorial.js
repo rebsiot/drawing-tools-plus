@@ -6,15 +6,15 @@ export const TUTORIAL_DISMISSED_FLAG = "tutorialDismissed";
 export const TUTORIAL_STEPS = Object.freeze([
   Object.freeze({
     title: "Choose a drawing tool",
-    body: "Open the Drawing Quickbar from Tokens or Drawings. Choose Box, Circle, Pen, Polygon, Text, or Arrow to draw on the Scene. Opening it from Tokens keeps your current Token selection until you choose a drawing tool."
+    body: "Open the Quickbar from Tokens or Drawings. Select, Pen, Box, Circle, Polygon and Text share the top row; Arrow is below. Pen makes an unfilled freehand line. Opening from Tokens leaves your tokens selected until you choose a Drawing tool."
   }),
   Object.freeze({
     title: "Select and change appearance",
-    body: "New shapes are selected for moving and resizing. With one unlocked Drawing selected, stroke, fill, text and the built-in style presets change that Drawing. With multiple Drawings selected, use Apply to N Selected explicitly."
+    body: "New shapes are selected for moving and resizing. Select becomes Unselect while a Drawing is selected; clicking it clears selection. With one unlocked Drawing selected, appearance controls change it. With several, use Apply to N Selected explicitly."
   }),
   Object.freeze({
     title: "Find and protect your map art",
-    body: "Expand All Drawings to search or Locate a marking. Players can edit and delete only their own unlocked Drawings. The GM can lock permanent gridlines and unlock protected map art. Deselect never deletes; Delete asks for confirmation."
+    body: "Expand All Drawings to search or Locate a marking. Players edit/delete only their own unlocked Drawings. The GM can use Lock to protect gridlines and Info to inspect locked artwork. Deselect never deletes; Delete asks for confirmation."
   }),
   Object.freeze({
     title: "Arrows, undo and getting help",
