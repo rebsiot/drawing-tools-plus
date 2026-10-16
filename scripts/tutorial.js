@@ -6,7 +6,7 @@ export const TUTORIAL_DISMISSED_FLAG = "tutorialDismissed";
 export const TUTORIAL_STEPS = Object.freeze([
   Object.freeze({
     title: "Choose a drawing tool",
-    body: "Open the Quickbar from Tokens or Drawings. Select, Pen, Box, Circle, Polygon and Text share the top row; Arrow is below. Pen makes an unfilled freehand line. Opening from Tokens leaves your tokens selected until you choose a Drawing tool."
+    body: "Open the Quickbar from Tokens or Drawings. The top row has Select, Pen, Box, Circle, Polygon and Text. Row two has Line, Arrow, Route and Callout. Pen is freehand. Opening from Tokens preserves your selected tokens until you choose a Drawing tool."
   }),
   Object.freeze({
     title: "Select and change appearance",
@@ -18,7 +18,7 @@ export const TUTORIAL_STEPS = Object.freeze([
   }),
   Object.freeze({
     title: "Arrows, undo and getting help",
-    body: "Choose Arrow to reveal the head-placement and head-shape options. Undo Style Change restores appearance only—not movement, text edits or deletion. Use Tutorial at the bottom of the Quickbar to reopen this guide anytime."
+    body: "Arrow lets you choose solid Triangle, Diamond or open Chevron heads. Route uses waypoint clicks; finish with double-click, Enter or Finish. For Callout, drag a pointer and type a label. Undo Style Change affects appearance only. Reopen this guide via Tutorial."
   })
 ]);
 

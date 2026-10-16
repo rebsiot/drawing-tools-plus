@@ -291,9 +291,14 @@ export function textDocumentData(point, text, options = {}) {
 export function drawingLabel(document) {
   if (!document) return "Drawing";
   const shape = document.shape?.type;
-  const kind = document.text?.trim() ? "Text" : ({
-    r: "Rectangle", e: "Ellipse", p: "Polygon"
-  }[shape] || "Drawing");
+  const annotation = document.flags?.[MODULE_ID]?.kind;
+  const kind = annotation === "line" ? "Line"
+    : annotation === "route" ? "Route"
+    : annotation === "callout-leader" ? "Callout pointer"
+    : annotation === "callout-label" ? "Callout text"
+    : document.text?.trim() ? "Text" : ({
+      r: "Rectangle", e: "Ellipse", p: "Polygon", f: "Freehand"
+    }[shape] || "Drawing");
   const name = typeof document.name === "string" ? document.name.trim() : "";
   const detail = name || (document.text?.trim().slice(0, 40)) || ((document.id || "").slice(0, 8));
   return {kind, name: detail || "Untitled", locked: Boolean(document.locked)};
