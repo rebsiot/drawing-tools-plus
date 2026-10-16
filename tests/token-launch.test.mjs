@@ -31,3 +31,16 @@ test("Drawing actions can switch from Tokens only after an explicit click", asyn
   assert.ok(!source.includes('controls.tokens.tools.select ='), "Do not replace native Token selection");
   assert.ok(!source.includes('canvas.ping('), "Locate remains local to the GM");
 });
+
+test("Quickbar restores native Token Controls when the user chooses Tokens or closes", async () => {
+ const s=await readFile(new URL("../scripts/main.js",import.meta.url),"utf8");
+ assert.match(s,/data-action="tokens" aria-label="Return to Token Controls"/);
+ assert.match(s,/if \(button\.dataset\.action === "tokens"\) await returnToTokens\(\)/);
+ assert.match(s,/await ui\.controls\.activate\(\{control: "tokens", tool: "select"\}\)/);
+ assert.match(s,/if \(shouldRestoreTokens\) void returnToTokens\(\)/);
+ assert.match(s,/closeDock\(\{restoreTokens: false\}\)/);
+ assert.match(s,/if \(tokenButton\) tokenButton\.disabled = !canvas\?\.drawings\?\.active/);
+ assert.match(s,/function cancelTextDialog\(\)/);
+ assert.match(s,/if \(creating\) void returnToTokens\(\)/);
+ assert.match(s,/selectCreatedDrawing\(doc\.id, canvas\.scene\.id\)/);
+});

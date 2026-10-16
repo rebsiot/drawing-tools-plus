@@ -43,6 +43,10 @@
 }
 #foundry-drawing-quickbar .dqb-header small { margin-left: 4px; color: #b1b8c2; font-size: 10px; font-weight: 400; }
 #foundry-drawing-quickbar .dqb-header .dqb-icon { width: 26px; height: 26px; padding: 2px; }
+#foundry-drawing-quickbar .dqb-header-title { min-width: 0; }
+#foundry-drawing-quickbar .dqb-header-actions { display: flex; align-items: center; gap: 5px; flex: none; }
+#foundry-drawing-quickbar .dqb-header .dqb-to-tokens { height: 26px; padding: 3px 7px; font-size: 11px; white-space: nowrap; }
+#foundry-drawing-quickbar .dqb-header .dqb-to-tokens i { margin-right: 3px; }
 #foundry-drawing-quickbar .dqb-content { overflow: auto; max-height: calc(100vh - 90px); padding: 11px; }
 #foundry-drawing-quickbar .dqb-tools { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 5px; }
 #foundry-drawing-quickbar .dqb-tools button { display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 5px; height: 52px; font-size: 11px; }

@@ -1,6 +1,14 @@
-# Test Report — Drawing Quickbar v0.1.16
+# Test Report — Drawing Quickbar v0.1.17
 
 **Date:** 2026-10-16
+
+## v0.1.17 — Return to Tokens (2026-10-16)
+- User-reported issue: native Drawings layer stays active when leaving Drawing Quickbar, preventing token manipulation.
+- Implementation: Tokens header button and close restoration; cancellation of unfinished annotation/new text also returns to Tokens. Canvas-ready teardown opts out of layer restoration.
+- Safety: existing Drawing auto-selection preserved for styling; no data migration.
+- Automated: new source regression plus existing test suite, syntax check and ZIP build required before release.
+- Live Foundry v14: **Not verified**. Test Box→style→Tokens→move token, close while drawing, Esc/right-click cancel, and protected gridlines.
+- Rollback: v0.1.16 with matching world backup if drawings were changed.
 
 ## v0.1.16 — Second row, Chevron geometry and first-open count (2026-10-16)
 

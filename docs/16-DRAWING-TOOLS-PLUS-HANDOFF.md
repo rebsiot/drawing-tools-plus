@@ -8,6 +8,14 @@
 **Status:** 11/11 automated/mock tests passed; **live Foundry test not yet performed**. No official Foundry package publication has occurred.
 **Code provenance:** first source import from the 0.1.0 ZIP; metadata/documentation/CI additions only, not a tested functionality upgrade.
 
+## 16.2 — v0.1.17 Token Controls return (2026-10-16)
+
+Reported bug: Selecting a shape activates native Drawing Controls; token manipulation is unavailable after leaving the Quickbar. This is a control navigation issue.
+
+Implementation: Quickbar header **Tokens** returns to native Token Controls while keeping Quickbar open. Close also restores Tokens when the Drawings layer remains active. Esc/right-click cancel of unfinished custom annotations and new text placement restores Tokens. Scene teardown does not forcibly change layers. Preserve completed Drawing auto-selection for immediate styling and resizing. All Scene documents, permissions, locks, IDs and gridline protection remain unchanged.
+
+Status: Source prepared on v0.1.16 commit `899257f7c243f8e3e4c862d4121a3de09056d3ef`, Foundry v14 live verification pending. Test Box styling and Token switching, then cancellation behavior, permissions and protected gridlines. Roll back code with v0.1.16; use world backup for data restoration.
+
 ## Purpose / product direction
 
 The source currently implements a compact, movable Drawing Quickbar layered onto Foundry **native Drawing documents**. The eventual Drawing Tools+ goal is Excalidraw-like ease of editing on the map, *not* a separate canvas editor and *not* a wall tool. A conceptual mockup is not evidence that planned editing tools exist in v0.1.0.

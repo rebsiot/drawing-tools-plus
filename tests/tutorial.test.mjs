@@ -55,7 +55,7 @@ test("first-use UI saves only the current GM User flag; can be reopened and skip
   assert.match(src, /if \(button\.dataset\.action === "tutorial"\) showTutorial\(\)/);
   assert.match(src, /if \(!dock \|\| !isUsable\(\) \|\| tutorialDialog\) return/);
   assert.match(src, /refreshToolHighlight\(\);\s*maybeOfferTutorial\(\);\s*}\s*function closeDock/);
-  assert.match(src, /function closeDock\(\) \{\s*closeTutorial\(\)/);
+  assert.match(src, /function closeDock\(\{restoreTokens = true\} = \{\}\) \{\s*const shouldRestoreTokens[^]*?closeTutorial\(\)/);
   assert.match(src, /function onKeydown\(event\) \{\s*if \(!dock \|\| !isUsable\(\) \|\| tutorialDialog\?\.open \|\| inspectDialog\?\.open\) return/);
   const guide = src.slice(src.indexOf("function closeTutorial()"), src.indexOf("async function openDock("));
   for (const forbidden of ["createEmbeddedDocuments(", "deleteEmbeddedDocuments(", "updateEmbeddedDocuments(", "localStorage."]) {
