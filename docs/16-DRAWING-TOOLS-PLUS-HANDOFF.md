@@ -94,6 +94,21 @@ v0.1.3 supersedes v0.1.2 and places the Selected Drawings inspector/Lock actions
 
 **Status:** v0.1.6 runtime and release notes are prepared; CI must pass before stable manifest advances. Live verification remains pending. Future Background/Working groups tracked in GitHub issue #1.
 
+## 16.1 update — v0.1.7: Token Controls Quickbar launcher (2026-10-16)
+
+**Request:** Show Drawing Tools+ from the native Token Controls menu too, so the GM can reach drawing tools without first navigating to Foundry's Drawings controls.
+
+**Implementation from live GitHub v0.1.6 source (new beta, pending Foundry v14 client verification):**
+- The Foundry v14 `getSceneControlButtons` hook adds a `drawingQuickbar` **button** under both `controls.drawings.tools` and `controls.tokens.tools`, scoped to GM users. Both point at the same `dock` instance, avoiding independent or duplicated quickbars.
+- Opening from Tokens leaves the native Token layer and currently controlled tokens untouched; opening from Drawings preserves the existing activate-Drawings behavior. Tool activation (Box, Circle, Pen, Polygon, Arrow, Text) explicitly switches to the Drawings layer as required by native APIs.
+- All Drawings Finder still supports local Locate without layer switch. Unlock updates only the explicitly chosen locked native Drawing while Tokens remains active. Select and Text actions from Finder switch to Drawings only when clicked.
+- No changes to native Token/Scene/Drawing schema, Actor data, token documents, module flags/settings, existing drawing identities, or GM permissions. Module ID remains `foundry-drawing-quickbar` and manifest remains stable; version bump to v0.1.7 with immutable ZIP and readable release note.
+- Automated/mock tests: two launch points and GM-only access; partial-controls guards, preserved Token tools, selective layer switching and ZIP/manifest metadata.
+- **Live test still required:** On a disposable Scene as GM, select a token and launch Drawing Quickbar from Token controls. Ensure token selection persists until a Drawing action is explicitly chosen. Confirm Drawings launcher toggles the same palette, Finder Locate/Unlock work from Tokens, and existing native selection and drawing behavior remain functional.
+- Prior version v0.1.6 remains the rollback target. Disabling/replacing module code does not reverse Saved Scene Drawing edits; back up the world before testing.
+
+**Outstanding:** Background/Working groups and gridline protection enhancements in GitHub Issue #1 remain in the module thread.
+
 ## Source of truth and GitHub release boundaries
 
 - Use the actual GitHub source at `rebsiot/drawing-tools-plus` (default branch `main`) and/or the newest verified working ZIP. Handoff notes describe intent but are not code.

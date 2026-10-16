@@ -136,7 +136,8 @@ async function flushDirectStylePatch() {
 }
 function refreshToolHighlight() {
   if (!dock) return;
-  const active = textOverlay ? "text" : (arrowOverlay ? "arrow" : (ui.controls?.tool?.name ?? "select"));
+  const active = textOverlay ? "text" : (arrowOverlay ? "arrow" :
+    (canvas?.drawings?.active ? (ui.controls?.tool?.name ?? "select") : null));
   for (const button of dock.querySelectorAll("[data-tool]")) {
     const selected = button.dataset.tool === active;
     button.classList.toggle("active", selected);
@@ -175,7 +176,7 @@ function createDock() {
   root.setAttribute("aria-label", "Drawing Quickbar");
   root.innerHTML = `
     <div class="dqb-header">
-      <span><i class="fa-solid fa-pen-ruler" aria-hidden="true"></i> Drawing Quickbar <small>v0.1.6</small></span>
+      <span><i class="fa-solid fa-pen-ruler" aria-hidden="true"></i> Drawing Quickbar <small>v0.1.7</small></span>
       <button type="button" class="dqb-icon" data-action="close" aria-label="Close Drawing Quickbar" title="Close"><i class="fa-solid fa-xmark"></i></button>
     </div>
     <div class="dqb-content">
@@ -268,12 +269,12 @@ function createDock() {
       finderVisibleCount += FINDER_PAGE_SIZE;
       refreshFinder();
     }
-    if (button.dataset.action === "select-only") selectOnlyDrawing(button.dataset.drawingId);
-    if (button.dataset.action === "edit-one-text") beginEditDrawingText(button.dataset.drawingId);
+    if (button.dataset.action === "select-only") await selectOnlyDrawing(button.dataset.drawingId);
+    if (button.dataset.action === "edit-one-text") await beginEditDrawingText(button.dataset.drawingId);
     if (button.dataset.action === "lock-selected") await lockSelected();
     if (button.dataset.action === "open-properties") await openSelectedProperties();
     if (button.dataset.action === "duplicate-selected") await duplicateSelected();
-    if (button.dataset.action === "edit-text") editSelectedText();
+    if (button.dataset.action === "edit-text") await editSelectedText();
     if (button.dataset.action === "apply-selected") await styleSelected();
     if (button.dataset.action === "undo-style") await undoSelectedStyle();
   });
@@ -310,12 +311,21 @@ function createDock() {
   updateDockInputs();
 }
 
-async function openDock() {
+async function openDock({activateDrawings = true} = {}) {
   if (!isUsable()) return notify("Open a Scene as GM before using this toolbar.");
   if (dock) return;
   createDock();
-  try { await ui.controls.activate({control: "drawings", tool: "select"}); }
-  catch (error) { console.error(`${MODULE_ID} | Could not activate drawings`, error); notify("Could not activate the Drawing tools. Check the browser console.", "error"); closeDock(); }
+  // Opening via Token controls must not deselect Tokens or leave the Tokens layer.
+  // Choosing an actual Drawing tool activates the native Drawings layer as usual.
+  if (activateDrawings) {
+    try { await ui.controls.activate({control: "drawings", tool: "select"}); }
+    catch (error) {
+      console.error(`${MODULE_ID} | Could not activate drawings`, error);
+      notify("Could not activate the Drawing tools. Check the browser console.", "error");
+      closeDock();
+      return;
+    }
+  }
   refreshToolHighlight();
 }
 function closeDock() {
@@ -332,7 +342,9 @@ function closeDock() {
   dock = null;
   finderVisibleCount = FINDER_PAGE_SIZE;
 }
-function toggleDock() { return dock ? closeDock() : openDock(); }
+function toggleDock({activateDrawings = true} = {}) {
+  return dock ? closeDock() : openDock({activateDrawings});
+}
 
 async function selectTool(tool) {
   if (!dock || !isUsable()) return;
@@ -506,13 +518,17 @@ function refreshFinder() {
   more.hidden = remaining <= 0;
   if (remaining > 0) more.textContent = `Show ${Math.min(FINDER_PAGE_SIZE, remaining)} more`;
 }
-function selectOnlyDrawing(id) {
-  if (!isUsable() || !canvas.drawings.active) return;
+async function selectOnlyDrawing(id) {
+  if (!isUsable()) return;
+  const sceneId = canvas.scene.id;
   const doc = canvas.scene.drawings.get(id);
   if (!doc || doc.locked) return notify("Unlock this Drawing before selecting it.");
-  const placeable = canvas.drawings.get(id);
-  if (!placeable) return notify("This Drawing has no visible canvas object. Locate is still available.");
   try {
+    // Explicitly selecting a Drawing from Tokens is the point we change layers.
+    if (!canvas.drawings.active) await ui.controls.activate({control: "drawings", tool: "select"});
+    if (canvas.scene?.id !== sceneId || !canvas.drawings.active) return;
+    const placeable = canvas.drawings.get(id);
+    if (!placeable) return notify("This Drawing has no visible canvas object. Locate is still available.");
     // A deliberate one-object selection avoids accidentally editing painted grids.
     canvas.drawings.releaseAll();
     if (!placeable.control({releaseOthers: true})) return notify("Foundry could not select this Drawing.");
@@ -601,7 +617,8 @@ async function lockSelected() {
   refreshSelectedPanel();
 }
 async function unlockDrawing(id) {
-  if (!isUsable() || !canvas.drawings.active) return;
+  // Explicit Unlock works from either control menu; it updates only the requested ID.
+  if (!isUsable()) return;
   const doc = canvas.scene.drawings.get(id);
   if (!doc?.locked) return refreshSelectedPanel();
   try {
@@ -661,28 +678,37 @@ async function duplicateSelected() {
   }
 }
 
-function editSelectedText() {
+async function editSelectedText() {
   if (!isUsable() || !canvas.drawings.active) return notify("Open the Drawings layer and select one drawing.");
   const sources = selectedEditableObjects();
   if (selectedDrawingObjects().length !== 1 || sources.length !== 1) {
     return notify("Select exactly one unlocked Drawing to edit text.");
   }
-  beginEditDrawingText(sources[0].document.id);
+  await beginEditDrawingText(sources[0].document.id);
 }
 /** Reuse the reliable focused popup instead of Foundry's context-sensitive text-edit handler. */
-function beginEditDrawingText(id) {
-  if (!isUsable() || !canvas.drawings.active) return notify("Open the Drawings layer first.");
+async function beginEditDrawingText(id) {
+  if (!isUsable()) return notify("Open a Scene before editing Drawing text.");
+  const sceneId = canvas.scene.id;
   const doc = canvas.scene.drawings.get(id);
   if (!doc) return notify("This Drawing no longer exists.");
   if (doc.locked) return notify("Unlock this Drawing before editing its text.");
   if (textDialog) return notify("Finish or cancel the current text entry first.");
-  exitArrow();
-  exitTextPlacement();
-  const center = drawingCenter(doc);
-  if (!center) return notify("Cannot position the text editor.");
-  const pos = canvas.clientCoordinatesFromCanvas(center);
-  textScene = {sceneId: canvas.scene.id, drawingId: doc.id};
-  showTextDialog(pos.x, pos.y);
+  try {
+    // Finder's Text action may be invoked while the Tokens layer is active.
+    if (!canvas.drawings.active) await ui.controls.activate({control: "drawings", tool: "select"});
+    if (canvas.scene?.id !== sceneId || !canvas.drawings.active) return;
+    exitArrow();
+    exitTextPlacement();
+    const center = drawingCenter(doc);
+    if (!center) return notify("Cannot position the text editor.");
+    const pos = canvas.clientCoordinatesFromCanvas(center);
+    textScene = {sceneId, drawingId: doc.id};
+    showTextDialog(pos.x, pos.y);
+  } catch (error) {
+    console.error(MODULE_ID + " | Could not open Drawing text editor", error);
+    notify("Could not open Drawing text editor. See console.", "error");
+  }
 }
 
 async function styleSelected() {
@@ -1030,11 +1056,17 @@ Hooks.once("init", () => {
     default: structuredClone(DEFAULT_PREFS)
   });
   Hooks.on("getSceneControlButtons", controls => {
-    if (!game.user?.isGM || !controls.drawings?.tools) return;
-    controls.drawings.tools.drawingQuickbar = {
-      name: "drawingQuickbar", title: "Drawing Quickbar", icon: "fa-solid fa-palette",
-      order: 95, button: true, onChange: () => toggleDock()
-    };
+    if (!game.user?.isGM) return;
+    // Two launch points, ONE movable Quickbar. Do not add a new Scene control layer.
+    for (const controlName of ["drawings", "tokens"]) {
+      const tools = controls[controlName]?.tools;
+      if (!tools) continue;
+      tools.drawingQuickbar = {
+        name: "drawingQuickbar", title: "Drawing Quickbar", icon: "fa-solid fa-palette",
+        order: 95, button: true, visible: true,
+        onChange: () => toggleDock({activateDrawings: controlName === "drawings"})
+      };
+    }
   });
 });
 Hooks.once("ready", () => {
@@ -1087,5 +1119,5 @@ Hooks.once("ready", () => {
     // A tool switch or Scene navigation should never leave an invisible input shield over the canvas.
     if (arrowOverlay && !arrowOverlay.contains(event.target) && !dock?.contains(event.target) && !canvas?.drawings?.active) exitArrow();
   });
-  console.info(`${MODULE_ID} | v0.1.6 ready (Foundry v14 native Drawing workflow)`);
+  console.info(`${MODULE_ID} | v0.1.7 ready (Foundry v14 native Drawing workflow)`);
 });

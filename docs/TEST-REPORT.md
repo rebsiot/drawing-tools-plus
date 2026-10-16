@@ -1,6 +1,14 @@
-# Test Report — Drawing Quickbar v0.1.6
+# Test Report — Drawing Quickbar v0.1.7
 
 **Date:** 2026-10-16
+
+## v0.1.7 — Token Controls launcher (2026-10-16)
+
+**Original baseline:** v0.1.6 GitHub module, token and drawing controls use Foundry v14 `getSceneControlButtons`.
+**New automated/mock coverage:** GM-only Quickbar button in Tokens and Drawings, preservation of native Token tools, missing-control fallback, Token-launch Open without immediate Drawing activation, single dock, explicit Drawing action activation, Finder Select/Text transitions and Unlock/Locate availability.
+**Live status:** **Not yet tested on the user's Foundry v14 client.** CI checks include syntax, mock unit tests, release manifest metadata and complete installable ZIP packaging.
+**Safety:** Opening the palette writes no Scene or Token documents; no migrations; native Token/Drawings control layers, module ID, settings and existing Scene drawing documents preserved.
+**Live test request:** Select a disposable Token, open Quickbar via Token controls, confirm no immediate layer/selection change. Then click Circle and verify native Drawing creation. From Tokens, use All Drawings Locate/Unlock and explicit Select/Text. Confirm Drawings launcher toggles the same palette.
 
 ## v0.1.6 — All Drawings inventory checks (2026-10-16)
 

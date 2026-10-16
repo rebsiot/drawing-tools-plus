@@ -28,10 +28,31 @@ test('v14 lifecycle registers a GM-only native control and never mutates drawing
   once.get('init')();
   assert.equal(registered.length, 1);
   assert.equal(registered[0][0], 'foundry-drawing-quickbar');
-  const nativeControls = {drawings:{tools:{select:{name:'select'}}}};
+  const nativeControls = {
+    drawings:{tools:{select:{name:'select'}}},
+    tokens:{tools:{select:{name:'select'}, target:{name:'target'}}}
+  };
   handlers.get('getSceneControlButtons')(nativeControls);
-  assert.equal(nativeControls.drawings.tools.drawingQuickbar.button, true);
-  assert.equal(nativeControls.drawings.tools.drawingQuickbar.name, 'drawingQuickbar');
+  for (const layer of ['drawings','tokens']) {
+    const launcher = nativeControls[layer].tools.drawingQuickbar;
+    assert.equal(launcher.button, true, layer + ' quickbar is a button');
+    assert.equal(launcher.name, 'drawingQuickbar', layer + ' uses the same module launcher');
+    assert.equal(launcher.title, 'Drawing Quickbar');
+    assert.equal(typeof launcher.onChange, 'function');
+  }
+  assert.equal(nativeControls.tokens.tools.target.name,'target','Existing Token tools remain intact');
+  const tokensOnly = {tokens:{tools:{select:{name:'select'}}}};
+  handlers.get('getSceneControlButtons')(tokensOnly);
+  assert.ok(tokensOnly.tokens.tools.drawingQuickbar, 'No need for Drawings control to be present');
+  const drawingsOnly = {drawings:{tools:{select:{name:'select'}}}};
+  handlers.get('getSceneControlButtons')(drawingsOnly);
+  assert.ok(drawingsOnly.drawings.tools.drawingQuickbar, 'Original Drawings button remains');
+  game.user.isGM = false;
+  const playerControls = {drawings:{tools:{}},tokens:{tools:{}}};
+  handlers.get('getSceneControlButtons')(playerControls);
+  assert.equal(playerControls.tokens.tools.drawingQuickbar, undefined, 'No player Token launcher');
+  assert.equal(playerControls.drawings.tools.drawingQuickbar, undefined, 'No player Drawing launcher');
+  game.user.isGM = true;
   once.get('ready')();
   assert.ok(handlers.has('controlDrawing'), 'Selection UI tracks native controlDrawing changes');
   assert.ok(handlers.has('updateDrawing'), 'Locked status updates are observed');

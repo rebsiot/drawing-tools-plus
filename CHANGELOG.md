@@ -2,6 +2,12 @@
 
 Short summaries of changes you can see in Foundry. See the [test report](docs/TEST-REPORT.md) for technical verification.
 
+## v0.1.7 — Drawing Quickbar from Token Controls
+- **New:** Drawing Quickbar appears in the **Tokens** controls as well as **Drawings** for the GM.
+- **Improved:** Opening from Tokens keeps the Token layer and selected tokens in place. Picking a Drawing tool switches to Drawings only when necessary.
+- **Improved:** **All Drawings → Locate** and **Unlock** work without switching away from Tokens; selecting or editing a Drawing switches only on request.
+- **Unchanged:** One shared Quickbar, native Scene Drawings, GM-only access and the existing module ID. No migrations or automatic changes to Tokens or gridlines.
+
 ## v0.1.6 — All Drawings at a Glance
 - **New:** A collapsed **All Drawings** list sits directly beneath Locked Drawings, with a total count and search.
 - **Improved:** Generic shapes show their type, a short ID and map coordinates to distinguish similar objects.
