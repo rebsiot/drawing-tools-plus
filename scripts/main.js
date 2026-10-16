@@ -5,11 +5,15 @@ import {
   stylePreferencesFromDrawing, singleStylePatch, styleTargetMode, visibleArrowStylePatch, isQuickbarArrow,
   shouldRunDrawingShortcut, shouldStyleNewDrawing
 } from "./model.js";
+import {TUTORIAL_STEPS, TUTORIAL_DISMISSED_FLAG, shouldAutoShowTutorial, tutorialStepIndex}
+  from "./tutorial.js";
 
 const TOOLS = new Set(["select", "rect", "ellipse", "polygon", "freehand", "text"]);
 const KEY_TO_TOOL = {v: "select", r: "rect", e: "ellipse", p: "polygon", f: "freehand", t: "text", a: "arrow"};
 let preferences = normalizePrefs(DEFAULT_PREFS);
 let dock = null;
+let tutorialDialog = null;
+let tutorialShownThisSession = false;
 let arrowOverlay = null;
 let arrowStart = null;
 let arrowPointerId = null;
@@ -192,7 +196,7 @@ function createDock() {
   root.setAttribute("aria-label", "Drawing Quickbar");
   root.innerHTML = `
     <div class="dqb-header">
-      <span><i class="fa-solid fa-pen-ruler" aria-hidden="true"></i> Drawing Quickbar <small>v0.1.9</small></span>
+      <span><i class="fa-solid fa-pen-ruler" aria-hidden="true"></i> Drawing Quickbar <small>v0.1.10</small></span>
       <button type="button" class="dqb-icon" data-action="close" aria-label="Close Drawing Quickbar" title="Close"><i class="fa-solid fa-xmark"></i></button>
     </div>
     <div class="dqb-content">
@@ -271,6 +275,7 @@ function createDock() {
       <label class="dqb-option"><input name="autoStyle" type="checkbox"> Apply my default style to new Drawings</label>
 
       <div class="dqb-help">Deselect clears selection only. Delete confirms before removing one unlocked Drawing. Arrowhead choices appear while Arrow is active. Undo Style Change only restores appearance.</div>
+      <div class="dqb-footer"><button type="button" data-action="tutorial" title="Reopen the quick tutorial anytime" aria-label="Open Drawing Quickbar tutorial"><i class="fa-solid fa-circle-question" aria-hidden="true"></i> Tutorial</button></div>
     </div>`;
   document.body.append(root);
   const left = preferences.position?.left ?? 112;
@@ -294,6 +299,7 @@ function createDock() {
       updateDockInputs();
     }
     if (button.dataset.action === "close") closeDock();
+    if (button.dataset.action === "tutorial") showTutorial();
     if (button.dataset.action === "deselect-one") {
       // Deselect only changes local selection; it never changes Scene data.
       canvas?.drawings?.get(button.dataset.drawingId)?.release();
@@ -357,6 +363,113 @@ function createDock() {
   updateDockInputs();
 }
 
+/**
+ * Native browser dialog: the guide changes no Scene, Token or Drawing documents.
+ * The opt-out uses a per-User Foundry flag, so it follows the GM account across browsers.
+ */
+function closeTutorial() {
+  const dialog = tutorialDialog;
+  if (!dialog) return;
+  tutorialDialog = null;
+  if (dialog.open) dialog.close();
+  dialog.remove();
+}
+
+function showTutorial() {
+  if (!dock || !isUsable() || tutorialDialog) return;
+  tutorialShownThisSession = true;
+  const dialog = document.createElement("dialog");
+  dialog.id = "dqb-tutorial";
+  dialog.setAttribute("aria-labelledby", "dqb-tutorial-title");
+  dialog.innerHTML = `
+    <div class="dqb-tour-header">
+      <strong><i class="fa-solid fa-circle-question" aria-hidden="true"></i> Drawing Quickbar Tutorial</strong>
+      <button type="button" data-tour="later" title="Not now" aria-label="Close tutorial">×</button>
+    </div>
+    <div class="dqb-tour-content">
+      <p class="dqb-tour-progress" data-role="tutorial-progress"></p>
+      <h2 id="dqb-tutorial-title"></h2>
+      <p data-role="tutorial-body"></p>
+    </div>
+    <div class="dqb-tour-actions">
+      <button type="button" data-tour="later">Not now</button>
+      <span class="dqb-tour-navigation">
+        <button type="button" data-tour="previous">Back</button>
+        <button type="button" data-tour="next" class="dqb-tour-primary">Next</button>
+        <button type="button" data-tour="dismiss" class="dqb-tour-primary" hidden>Don't Show Again</button>
+      </span>
+    </div>`;
+  let index = 0;
+  const render = () => {
+    const step = TUTORIAL_STEPS[index];
+    dialog.querySelector("[data-role='tutorial-progress']").textContent =
+      `Step ${index + 1} of ${TUTORIAL_STEPS.length}`;
+    dialog.querySelector("#dqb-tutorial-title").textContent = step.title;
+    dialog.querySelector("[data-role='tutorial-body']").textContent = step.body;
+    dialog.querySelector('[data-tour="previous"]').hidden = index === 0;
+    dialog.querySelector('[data-tour="next"]').hidden = index === TUTORIAL_STEPS.length - 1;
+    dialog.querySelector('[data-tour="dismiss"]').hidden = index !== TUTORIAL_STEPS.length - 1;
+  };
+  dialog.addEventListener("click", async event => {
+    const button = event.target.closest("button[data-tour]");
+    if (!button || !dialog.contains(button)) return;
+    const action = button.dataset.tour;
+    if (action === "later") return closeTutorial();
+    if (action === "previous" || action === "next") {
+      index = tutorialStepIndex(index, action);
+      render();
+      dialog.querySelector(action === "next" && index === TUTORIAL_STEPS.length - 1
+        ? '[data-tour="dismiss"]' : '[data-tour="' + action + '"]')?.focus();
+      return;
+    }
+    if (action === "dismiss" && index === TUTORIAL_STEPS.length - 1) {
+      button.disabled = true;
+      try {
+        // No world-wide setting: this writes only the active GM User document's module flag.
+        await game.user.setFlag(MODULE_ID, TUTORIAL_DISMISSED_FLAG, true);
+        closeTutorial();
+      } catch (error) {
+        console.warn(`${MODULE_ID} | Tutorial preference could not be saved`, error);
+        notify("Couldn't save Don't Show Again. Use Not now to close and retry later.", "warn");
+        button.disabled = false;
+      }
+    }
+  });
+  dialog.addEventListener("cancel", event => {
+    event.preventDefault();
+    closeTutorial(); // Esc = Not now; does not save opt-out
+  });
+  dialog.addEventListener("close", () => {
+    if (tutorialDialog === dialog) tutorialDialog = null;
+    dialog.remove();
+  });
+  document.body.append(dialog);
+  tutorialDialog = dialog;
+  render();
+  try {
+    dialog.showModal();
+    dialog.querySelector('[data-tour="next"]')?.focus();
+  } catch (error) {
+    console.error(`${MODULE_ID} | Could not open tutorial`, error);
+    closeTutorial();
+    notify("Could not open tutorial in this browser. See console.", "warn");
+  }
+}
+
+function maybeOfferTutorial() {
+  if (!dock || tutorialShownThisSession || !isUsable()) return;
+  let dismissed = false;
+  try {
+    dismissed = game.user.getFlag(MODULE_ID, TUTORIAL_DISMISSED_FLAG) === true;
+  } catch (error) {
+    console.warn(`${MODULE_ID} | Could not read the tutorial preference`, error);
+  }
+  if (shouldAutoShowTutorial({
+    isGM: game.user.isGM, hasDock: Boolean(dock),
+    shownThisSession: tutorialShownThisSession, dismissed
+  })) showTutorial();
+}
+
 async function openDock({activateDrawings = true} = {}) {
   if (!isUsable()) return notify("Open a Scene as GM before using this toolbar.");
   if (dock) return;
@@ -373,8 +486,10 @@ async function openDock({activateDrawings = true} = {}) {
     }
   }
   refreshToolHighlight();
+  maybeOfferTutorial();
 }
 function closeDock() {
+  closeTutorial();
   newDrawingSerial++;
   if (pendingStyleTimer !== null) clearTimeout(pendingStyleTimer);
   pendingStyleTimer = null;
@@ -1124,7 +1239,7 @@ function showTextDialog(clientX, clientY) {
 }
 
 function onKeydown(event) {
-  if (!dock || !isUsable()) return;
+  if (!dock || !isUsable() || tutorialDialog?.open) return;
   if (event.key === "Escape" && (arrowOverlay || textOverlay)) {
     event.preventDefault();
     exitArrow();
@@ -1224,5 +1339,5 @@ Hooks.once("ready", () => {
     // A tool switch or Scene navigation should never leave an invisible input shield over the canvas.
     if (arrowOverlay && !arrowOverlay.contains(event.target) && !dock?.contains(event.target) && !canvas?.drawings?.active) exitArrow();
   });
-  console.info(`${MODULE_ID} | v0.1.9 ready (Foundry v14 native Drawing workflow)`);
+  console.info(`${MODULE_ID} | v0.1.10 ready (Foundry v14 native Drawing workflow)`);
 });
