@@ -233,7 +233,7 @@ function createDock() {
   root.setAttribute("aria-label", "Drawing Quickbar");
   root.innerHTML = `
     <div class="dqb-header">
-      <span><i class="fa-solid fa-pen-ruler" aria-hidden="true"></i> Drawing Quickbar <small>v0.1.13</small></span>
+      <span><i class="fa-solid fa-pen-ruler" aria-hidden="true"></i> Drawing Quickbar <small>v0.1.14</small></span>
       <button type="button" class="dqb-icon" data-action="close" aria-label="Close Drawing Quickbar" title="Close"><i class="fa-solid fa-xmark"></i></button>
     </div>
     <div class="dqb-content">
@@ -267,6 +267,22 @@ function createDock() {
         </label>
         <small>These options apply to the next arrow, not existing Drawings.</small>
       </div>
+      <details class="dqb-finder" aria-label="All Drawings on this Scene">
+        <summary>All Drawings (<span data-value="scene-drawing-count">0</span>)</summary>
+        <div class="dqb-find-heading">
+          <label class="dqb-find-label" for="dqb-drawing-search">Search drawings</label>
+          <button type="button" data-action="finder-locked-only" class="dqb-locked-filter"
+            aria-label="Show locked Drawings only" aria-pressed="false" title="Show only locked Drawings">
+            <i class="fa-solid fa-lock" aria-hidden="true"></i> Locked only
+          </button>
+        </div>
+        <input id="dqb-drawing-search" type="search" data-role="drawing-search"
+          aria-label="Search all Scene Drawings" placeholder="Text, name, shape or ID" autocomplete="off">
+        <small class="dqb-find-status" role="status"></small>
+        <div class="dqb-find-results"></div>
+        <button type="button" data-action="finder-more" class="dqb-finder-more" hidden>Show more</button>
+        <p class="dqb-find-help">Locate highlights a Drawing. Select and Deselect change your selection. <i class="fa-solid fa-lock" aria-hidden="true"></i> marks protected Drawings; the GM can Unlock or inspect them here.</p>
+      </details>
       <section class="dqb-selection" aria-label="Selected drawings">
         <div class="dqb-section-title">SELECTED DRAWINGS <strong data-value="selected-count">0</strong></div>
         <div class="dqb-actions">
@@ -278,22 +294,6 @@ function createDock() {
           <button type="button" data-action="undo-style" title="Undo the most recent Quickbar appearance change only; not movement, text edits or deletion"><i class="fa-solid fa-rotate-left"></i> Undo Style Change</button>
         </div>
         <div class="dqb-selected-list" aria-live="polite"></div>
-        <details class="dqb-finder" aria-label="All Drawings on this Scene">
-          <summary>All Drawings (<span data-value="scene-drawing-count">0</span>)</summary>
-          <div class="dqb-find-heading">
-            <label class="dqb-find-label" for="dqb-drawing-search">Search drawings</label>
-            <button type="button" data-action="finder-locked-only" class="dqb-locked-filter"
-              aria-label="Show locked Drawings only" aria-pressed="false" title="Show only locked Drawings">
-              <i class="fa-solid fa-lock" aria-hidden="true"></i> Locked only
-            </button>
-          </div>
-          <input id="dqb-drawing-search" type="search" data-role="drawing-search"
-            aria-label="Search all Scene Drawings" placeholder="Text, name, shape or ID" autocomplete="off">
-          <small class="dqb-find-status" role="status"></small>
-          <div class="dqb-find-results"></div>
-          <button type="button" data-action="finder-more" class="dqb-finder-more" hidden>Show more</button>
-          <p class="dqb-find-help">Locate highlights a Drawing. Select and Deselect change your selection. <i class="fa-solid fa-lock" aria-hidden="true"></i> marks protected Drawings; the GM can Unlock or inspect them here.</p>
-        </details>
       </section>
       <div class="dqb-section-title">STYLE PRESETS</div>
       <div class="dqb-style-scope" data-role="style-scope" aria-live="polite">Setting new-Drawing defaults.</div>
@@ -681,7 +681,11 @@ function makeObjectRow(document, action, title, finder = false) {
   actions.append(makeActionButton(document, "locate-one", "Pan and highlight", "Locate"));
   const controlled = Boolean(canvas?.drawings?.active &&
     canvas.drawings.get(document.id)?.controlled);
-  if (finder && controlled) row.classList.add("dqb-is-selected");
+  if (finder) {
+    // A stable ID allows native selection state to refresh without rebuilding buttons.
+    row.dataset.drawingId = document.id;
+    if (controlled) row.classList.add("dqb-is-selected");
+  }
   if (action && (action === "deselect-one" ||
       (action === "unlock-one" && game.user.isGM) ||
       (action === "toggle-one" && canEdit(document)))) {
@@ -736,11 +740,28 @@ function refreshSelectedPanel() {
     dock.querySelector('[data-action="' + action + '"]').disabled =
       selected.length !== 1 || editable.length !== 1;
   }
-  refreshFinder();
+  // Selecting/Deselecting must never rebuild or move the All Drawings rows.
+  refreshFinderSelectionState();
 }
 
+/** Update Select/Deselect labels and highlights in place, preserving focus and scroll. */
+function refreshFinderSelectionState() {
+  if (!dock?.querySelector(".dqb-finder")?.open) return;
+  for (const row of dock.querySelectorAll(".dqb-find-results .dqb-object-row[data-drawing-id]")) {
+    const id = row.dataset.drawingId;
+    const selected = Boolean(canvas?.drawings?.active && canvas.drawings.get(id)?.controlled);
+    row.classList.toggle("dqb-is-selected", selected);
+    const button = row.querySelector('button[data-action="toggle-one"]');
+    if (!button) continue; // Locked and read-only rows cannot be selected.
+    button.textContent = selected ? "Deselect" : "Select";
+    button.setAttribute("aria-pressed", String(selected));
+    const title = selected ? "Deselect just this Drawing" : "Add this Drawing to the selection";
+    button.title = title;
+    button.setAttribute("aria-label", title);
+  }
+}
 
-/** All native Scene Drawings, including locked/hidden items, shown only while expanded. */
+/** Rebuild the list only for search/filter/pagination and actual Scene Drawing changes. */
 function refreshFinder() {
   if (!dock) return;
   const panel = dock.querySelector(".dqb-finder");
@@ -761,12 +782,18 @@ function refreshFinder() {
   status.textContent = found.matches
     ? `Showing ${found.shown.length} of ${found.matches}${finderLockedOnly ? " locked" : ""} Drawing${found.matches === 1 ? "" : "s"}`
     : finderLockedOnly ? "No matching locked Drawings" : "No matching Drawings";
+  // Genuine data/search redraws should preserve the inventory's browsing position.
+  const content = dock.querySelector(".dqb-content");
+  const scrollTop = content?.scrollTop ?? 0;
+  const resultsScrollTop = results.scrollTop;
   results.replaceChildren(...(found.shown.length
     ? found.shown.map(doc => makeObjectRow(doc,
       doc.locked ? "unlock-one" : "toggle-one",
       doc.locked ? "Unlock drawing" : "Add or remove this Drawing from selection", true))
     : [Object.assign(documentCreate("p", "dqb-empty"), {textContent:
       finderLockedOnly ? "No locked Drawings match this search" : "Try a different search"})]));
+  results.scrollTop = resultsScrollTop;
+  if (content) content.scrollTop = scrollTop;
   const remaining = found.matches - found.shown.length;
   more.hidden = remaining <= 0;
   if (remaining > 0) more.textContent = `Show ${Math.min(FINDER_PAGE_SIZE, remaining)} more`;
@@ -1466,16 +1493,23 @@ Hooks.once("ready", () => {
   });
   Hooks.on("controlDrawing", () => queueMicrotask(refreshSelectedPanel));
   Hooks.on("releaseDrawing", () => queueMicrotask(refreshSelectedPanel));
-  Hooks.on("updateDrawing", refreshSelectedPanel);
+  Hooks.on("updateDrawing", () => {
+    refreshSelectedPanel();
+    refreshFinder();
+  });
   Hooks.on("createDrawing", (doc, _options, userId) => {
     refreshSelectedPanel();
+    refreshFinder();
     if (!dock || !isUsable() || !canvas.drawings.active ||
         userId !== game.user.id || doc?.parent?.id !== canvas.scene.id ||
         !canEdit(doc) || arrowOverlay || textOverlay ||
         !["rect", "ellipse", "polygon", "freehand"].includes(ui.controls?.tool?.name)) return;
     selectCreatedDrawing(doc.id, canvas.scene.id);
   });
-  Hooks.on("deleteDrawing", refreshSelectedPanel);
+  Hooks.on("deleteDrawing", () => {
+    refreshSelectedPanel();
+    refreshFinder();
+  });
   Hooks.on("canvasPan", refreshFocusMarker);
   Hooks.on("renderSceneControls", () => {
     refreshToolHighlight();
@@ -1499,5 +1533,5 @@ Hooks.once("ready", () => {
     // A tool switch or Scene navigation should never leave an invisible input shield over the canvas.
     if (arrowOverlay && !arrowOverlay.contains(event.target) && !dock?.contains(event.target) && !canvas?.drawings?.active) exitArrow();
   });
-  console.info(`${MODULE_ID} | v0.1.13 ready (Foundry v14 native Drawing workflow)`);
+  console.info(`${MODULE_ID} | v0.1.14 ready (Foundry v14 native Drawing workflow)`);
 });

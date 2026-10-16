@@ -432,8 +432,8 @@
 
 /* Native additive selection is visible in the All Drawings list without a second mode. */
 #foundry-drawing-quickbar .dqb-finder .dqb-object-row.dqb-is-selected {
-  border-left: 2px solid #edc777;
-  padding-left: 5px;
+  /* An inset marker highlights selection without shifting the row or its buttons. */
+  box-shadow: inset 2px 0 #edc777;
 }
 #foundry-drawing-quickbar .dqb-finder .dqb-object-row.dqb-is-selected .dqb-object-name {
   font-weight: 700;
@@ -500,4 +500,12 @@
   border-radius: 5px;
   padding: 5px 8px;
   user-select: text;
+}
+
+/* v0.1.14: All Drawings stays above the controls that grow with selection. */
+#foundry-drawing-quickbar .dqb-finder { margin: 8px 0 7px; }
+#foundry-drawing-quickbar .dqb-selection {
+  border-top: 1px solid #596373;
+  margin-top: 5px;
+  padding-top: 5px;
 }
