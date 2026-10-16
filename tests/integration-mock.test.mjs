@@ -35,6 +35,7 @@ test('v14 lifecycle registers a GM-only native control and never mutates drawing
   once.get('ready')();
   assert.ok(handlers.has('controlDrawing'), 'Selection UI tracks native controlDrawing changes');
   assert.ok(handlers.has('updateDrawing'), 'Locked status updates are observed');
+  assert.ok(handlers.has('createDrawing'), 'Creation hook can select a newly created Drawing');
   let mutationCount = 0;
   const pending = {parent:{id:'scene-1'}, updateSource:()=>mutationCount++};
   handlers.get('preCreateDrawing')(pending, {_id:null}, {}, 'gm');

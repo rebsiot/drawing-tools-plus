@@ -5,7 +5,7 @@ import {readFile} from "node:fs/promises";
 test("Selected Drawings controls precede style sliders and include native safety actions", async () => {
   const src = await readFile(new URL("../scripts/main.js", import.meta.url), "utf8");
   const selected = src.indexOf('<section class="dqb-selection"');
-  const styles = src.indexOf('QUICK STYLES');
+  const styles = src.indexOf('STYLE PRESETS');
   assert.ok(selected > 0 && styles > selected, "Selection panel must be above style fields");
   for (const action of ["lock-selected", "unlock-one", "open-properties", "deselect-one",
     "duplicate-selected", "edit-text", "apply-selected", "undo-style"]) {

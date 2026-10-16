@@ -4,6 +4,7 @@ import {
   MODULE_ID, DEFAULT_PREFS, normalizePrefs, stylePatch,
   arrowPoints, arrowDocumentData, duplicateDrawingData, textDocumentData, drawingLabel,
   drawingCenter, editTextPatch, findSceneDrawings,
+  stylePreferencesFromDrawing, singleStylePatch, styleTargetMode,
   shouldRunDrawingShortcut, snapshotStyle, shouldStyleNewDrawing, PRESETS
 } from '../scripts/model.js';
 
@@ -189,7 +190,7 @@ test('focused text editing patch changes only text and appearance, preserving lo
   const doc={id:'drawing-a',locked:false,x:10,y:20,
     shape:{type:'r',width:100,height:20},flags:{important:true},text:'a'};
   const original=structuredClone(doc);
-  const patch=editTextPatch(doc,'Very Rare Text Art',{fontSize:48,textColor:'#abcdef'});
+  const patch=editTextPatch(doc,'Very Rare Text Art',{fontSize:48,textColor:'#abcdef',textAlpha:1});
   assert.deepEqual(patch,{_id:'drawing-a',text:'Very Rare Text Art',fontSize:48,textColor:'#abcdef'});
   assert.equal('shape' in patch,false);
   assert.equal('x' in patch,false);
@@ -198,4 +199,47 @@ test('focused text editing patch changes only text and appearance, preserving lo
   assert.equal(editTextPatch({...doc,locked:true},'changed',{fontSize:48}),null);
   assert.equal(editTextPatch(doc,'  ',{}),null);
   assert.equal(editTextPatch(doc,'x'.repeat(2001),{}),null);
+});
+
+test('one ellipse loads its actual styling without overwriting default settings', () => {
+  const circle = {id:'circle',shape:{type:'e',width:150,height:150},
+    fillType:1,fillColor:'#335577',fillAlpha:.65,
+    strokeColor:'#ffcc00',strokeWidth:7,strokeAlpha:1,
+    text:'',fontSize:38,textColor:'#ffffff'};
+  const saved = structuredClone(DEFAULT_PREFS);
+  const current = stylePreferencesFromDrawing(circle,saved);
+  assert.equal(current.strokeWidth,7);
+  assert.equal(current.fillColor,'#335577');
+  assert.equal(current.filled,true);
+  assert.equal(current.fontSize,38);
+  assert.deepEqual(saved,DEFAULT_PREFS);
+});
+test('direct input patches only the named style property, not geometry or flags', () => {
+  const draft = {...DEFAULT_PREFS,strokeColor:'#aabbcc',fillColor:'#112233',filled:true};
+  assert.deepEqual(singleStylePatch('strokeColor',draft),{strokeColor:'#aabbcc',strokeAlpha:1});
+  assert.deepEqual(singleStylePatch('fillColor',draft),{fillColor:'#112233',fillType:1,fillAlpha:.28});
+  assert.deepEqual(singleStylePatch('filled',{...draft,filled:false}),{fillType:0,fillAlpha:0});
+  assert.deepEqual(singleStylePatch('fontSize',{...draft,fontSize:48}),{fontSize:48,textAlpha:1});
+  assert.equal(singleStylePatch('unknown',draft),null);
+  for(const field of ['strokeColor','strokeWidth','fillColor','fillAlpha','filled','textColor','fontSize']) {
+    const patch=singleStylePatch(field,draft);
+    for(const protectedField of ['_id','id','shape','x','y','locked','flags','name']) {
+      assert.ok(!(protectedField in patch),field+' must not touch '+protectedField);
+    }
+  }
+});
+test('single-selection edits immediately; multi-selection requires explicit apply', () => {
+  assert.deepEqual(styleTargetMode([]),{mode:'defaults',count:0,id:null});
+  assert.deepEqual(styleTargetMode([{id:'c1',locked:false}]),{mode:'single',count:1,id:'c1'});
+  assert.deepEqual(styleTargetMode([{id:'grid',locked:true}]),{mode:'batch',count:0,id:null});
+  assert.deepEqual(styleTargetMode([{id:'c1'},{id:'grid',locked:true}]),{mode:'batch',count:1,id:null});
+});
+test('adding a label to a native ellipse restores text visibility without changing its identity', () => {
+  const ellipse={id:'circle-1',locked:false,shape:{type:'e',width:170,height:130},
+    text:'',textAlpha:0,x:350,y:100,flags:{preserved:'yes'}};
+  const original=structuredClone(ellipse);
+  const patch=editTextPatch(ellipse,'Room 7',{fontSize:32,textColor:'#eeeeee'});
+  assert.deepEqual(patch,{_id:'circle-1',text:'Room 7',fontSize:32,textColor:'#eeeeee',textAlpha:1});
+  assert.ok(!('shape' in patch) && !('flags' in patch));
+  assert.deepEqual(ellipse,original);
 });
