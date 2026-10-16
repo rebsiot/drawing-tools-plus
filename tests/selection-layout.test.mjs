@@ -18,6 +18,7 @@ test("Selected Drawings controls precede style sliders and include native safety
 test("Quickbar Text workflow uses focused modal and native embedded Drawing creation", async () => {
   const src = await readFile(new URL("../scripts/main.js", import.meta.url), "utf8");
   assert.match(src, /popup\.elements\.namedItem\("drawingText"\)\.focus\(\)/);
-  assert.match(src, /textDocumentData\(textScene\.position, raw, newPreferences\)/);
+  assert.match(src, /textDocumentData\(operation\.position, raw, newPreferences\)/);
+  assert.match(src, /editTextPatch\(existing, raw, newPreferences\)/);
   assert.match(src, /popup\.addEventListener\("keydown"/);
 });
