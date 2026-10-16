@@ -1,79 +1,36 @@
-# Drawing Quickbar — Changelog
+# Drawing Tools+ — Changelog
 
-## v0.1.4 — 2026-10-16 (beta)
+Short summaries of changes you can see in Foundry. See the [test report](docs/TEST-REPORT.md) for technical verification.
 
-- **Added:** Find Drawing expandable inspector searches all current Scene native Drawing documents by text/name/type/ID, prioritizing exact text (e.g. a stray 'a'), including locked and hidden drawings. Limits displayed results to 60 with counts; no automatic selection or world modifications.
-- **Added:** Locate button on selected, locked and finder Drawings uses local canvas.animatePan and a seven-second CSS marker that tracks pan/zoom. Never broadcasts a canvas ping to other clients.
-- **Added:** Finder Select explicitly selects only that unlocked native Drawing, clearing other selections to reduce accidental deletions/edits. Finder Edit opens the focused text form for an unlocked text Drawing.
-- **Fixed:** Quickbar Edit Text no longer relies on the unreliable native enableTextEditing() handoff. Prefilled text, size and color are edited in a focused dialog, saving only those fields on the existing Drawing (same ID, position, geometry, lock and flags).
-- **Fixed:** Shortcut interception no longer treats every Drawing's event method as evidence of an active text editor. Normal hotkeys still pause in native text mode, form inputs and overlays.
-- **Preserved:** Existing module ID, drawing flags, permissions, styles, saved preferences, gridlines, other Scene objects and source-available proprietary license.
-- **Testing:** Node model, wiring, version metadata and ZIP builder in GitHub Actions; no live Foundry testing claimed for v0.1.4.
-- **Next:** Explore background/working groups and more direct manipulation, while retaining native Foundry Documents and safe locking.
+## v0.1.5 — Draw, Then Edit
+- **New:** Shapes become selected after creation so you can move/resize them immediately.
+- **Changed:** Presets and style controls directly change **one selected Drawing**.
+- **Changed:** Multiple selected Drawings require an explicit **Apply to N Selected**; locked Drawings are excluded.
+- **Fixed:** Edit Text can add a visible label to a circle even when it had no text before.
+- **Simplified:** The four presets are built in. New-Drawing defaults are remembered locally; there is no separate style-saving step.
 
+## v0.1.4 — Find Drawings
+- Search Scene Drawings, including tiny text and locked items.
+- **Locate** pans and highlights an object locally; **Select** replaces the current selection.
+- Edit Text now opens a focused dialog rather than unreliable inline editing.
 
+## v0.1.3 — Visible Drawing Actions
+- Selected-object details and Lock, Duplicate, Edit Text and Properties appear beneath the tool buttons.
+- Inactive controls collapse so the quickbar stays compact.
 
-## v0.1.3 — 2026-10-16 (beta)
+## v0.1.2 — Text and Locking
+- Text placement opens a popup with font size and color; letter shortcuts no longer hijack typing.
+- Added selected-object list, explicit native Lock and unlock recovery.
 
-- **Improved visibility:** Selected Drawings inspector and Lock/Properties/Duplicate/Edit Text actions now appear immediately beneath the tool palette, above all style sliders and presets.
-- **Reduced clutter:** The action grid collapses when nothing is selected, while keeping Locked Drawings unlock accessible and Revert Style available when there is a style change to undo.
-- **Carried forward:** v0.1.2 shortcut suppression, text-placement popup and native Drawing locks. v0.1.2 is superseded for new installs.
-- **Safety:** Still no automatic locking or rewriting of existing Scene Drawings.
-- **Testing:** Automated Node, manifest and packaging tests; live Foundry verification pending.
+## v0.1.1 — Arrow and Duplicate
+- Fixed the Foundry v14 validation error on Arrow creation.
+- Added Duplicate and the first Edit Text control, refined in v0.1.4.
 
+## v0.1.0 — First Beta
+- Added the Drawing Quickbar, shape shortcuts, four presets, Arrow and selected styling.
+- Set up GitHub releases and manifest-based installation/update.
 
+### Status
+Source is a GitHub beta targeting Foundry v14. New v0.1.5 features still need a live test; automated tests and ZIP checks alone do not establish live compatibility. Keep a world backup before testing.
 
-## v0.1.2 — 2026-10-16 (beta)
-
-- **Fixed:** Single-letter Quickbar shortcuts no longer intercept Foundry native Text tool or native inline editing. Guarded against canvas text listeners, popup focus, composition and inputs.
-- **Added:** Text-placement popup on click with focused textarea, font-size presets, numeric pixel size and color. Save creates one native Drawing; Cancel/Esc leaves the Scene untouched.
-- **Added:** Selected Drawings inspector shows each selected native Drawing with readable name/type and Deselect; persistent Lock, Properties, Duplicate, Edit Text, Apply Style and Revert Style actions.
-- **Added:** Explicit native Drawing `locked` update for selected objects, plus an expandable Locked Drawings list with per-Drawing unlock. Existing Drawings are never locked automatically.
-- **Preserved:** No Drawing deletions or migrations, no changes to other modules, core files or Scene geometry. `foundry-drawing-quickbar` module ID and settings unchanged.
-- **Tests:** Pure helpers, editor shortcut gating, release metadata, CI and ZIP build. Live Foundry v14 verification of new popup, locking and selection still required.
-- **Planned:** Background/Working organizational groups and further manipulation UX from GitHub issue #1.
-
-
-
-## v0.1.1 — 2026-10-16 (beta)
-
-- **Fixed (based on live report):** Arrow no longer uses legacy invalid `shape.type: "f"` rejected by Foundry v14. It uses one closed, filled native polygon (`"p"`) with an arrow silhouette. Coordinate/persistence/undo regression requires live verification.
-- **Added:** Duplicate selected, unlocked Drawings as new native Drawing documents, offset for immediate editing. Preserves original documents, flags, shapes and styles; new document IDs are generated by Foundry.
-- **Added:** Edit Text button invokes Foundry v14's native inline Drawing text editor for one selected, unlocked Drawing.
-- **Recorded TODO:** Selected Objects inspector with clear names/types and per-object deselection; protect painted gridlines and map annotations via explicit native Drawing locking and non-rendering background/working groups. Do not auto-lock or reorganize existing Drawings.
-- **Preserved:** Existing styles, presets, GM controls, shortcuts, module ID, preferences, flags, original Drawing data and non-Drawing systems. No migration.
-- **Automated tests:** CI validates Node tests, JS syntax and complete release ZIP (see `docs/TEST-REPORT.md`).
-- **Live Foundry testing:** v0.1.0 generally worked per GM report except Arrow validation. v0.1.1 changes are unverified live.
-- **Distribution:** GitHub beta; stable manifest URL, pinned v0.1.1 ZIP, restrictive personal-use license. Official Foundry directory submission not yet requested.
-- **Upgrade/rollback:** Back up world + installed module. Update through Foundry Setup; restoring the earlier module does not reverse changes to Scene Drawing documents.
-
-
-
-## v0.1.0 — 2026-10-16
-
-- **Added:** GM-facing Drawing Quickbar in Foundry v14 Drawing controls.
-- **Added:** Native Select, Freehand, Rectangle, Ellipse, Polygon and Text shortcuts.
-- **Added:** Experimental drag-to-create Arrow, persisted as a single native Drawing document, not a Tile or Region.
-- **Added:** Four style presets; stroke, fill, text, width, opacity and font-size controls; client-local saved preferences.
-- **Added:** Optional style-on-create hook for local, new Drawing documents while Quickbar is open.
-- **Added:** Apply style to selected unlocked drawings and one-level manual style revert.
-- **Preserved:** Native Drawing document IDs, selection, movement, resizing, permissions, and scene persistence. No world migrations or core patches.
-- **Compatibility:** Foundry v14 API targeted; system independent; live version verification pending.
-- **Automated tests:** 11 Node unit/mock tests passed; JavaScript syntax checked; module manifest validated. See `docs/TEST-REPORT.md`.
-- **Live test:** Not run. Test on a disposable Scene before enabling in an established world.
-- **Known issues:** Preview styles may differ until save; Arrow coordinate conversion and native geometry require live confirmation; no published update URL; GM-only beta.
-- **Upgrade / rollback:** See `README.md`; back up the world, install complete module folder, disable to roll back without deleting persisted drawings.
-
-### GitHub v0.1.0 beta publication (distribution only)
-
-- **Published format:** Stable manifest URL on `main`; version-pinned GitHub release ZIP for Foundry's built-in installer and updater.
-- **Fixed:** Release ZIP layout now puts `module.json` at archive root for Foundry's manifest installation flow.
-- **License:** Source-available proprietary [Personal Use Only (No Redistribution)](LICENSE.md) as used by other rebsiot Foundry tools.
-- **Unchanged:** All v0.1.0 runtime scripts, Drawing document behavior, IDs, flags, and existing functionality.
-- **Testing:** Syntax, Node unit/mock tests, manifest checks and package verification on GitHub Actions; **no live Foundry v14 verification**.
-- **Official directory:** Not submitted. This is an independent GitHub beta.
-
-### GitHub source import (documentation/packaging, no runtime feature changes)
-
-- Linked the existing module ID to `rebsiot/drawing-tools-plus`; kept all Drawing document behavior and test cases unchanged.
-- Added test/build automation and handoff documentation. No GitHub Release, Foundry package listing, or live compatibility claim is implied.
+[Installation and rollback](README.md) · [Personal Use Only License](LICENSE.md)

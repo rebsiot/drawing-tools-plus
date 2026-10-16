@@ -1,10 +1,8 @@
 name: Publish beta GitHub Release
 on:
   push:
-    tags:
-      - 'v*'
-    branches:
-      - 'beta/v*'
+    tags: ['v*']
+    branches: ['beta/v*']
 permissions:
   contents: write
 jobs:
@@ -15,7 +13,7 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: '22'
-      - name: Check release ref matches module version
+      - name: Check version and release notes
         shell: bash
         run: |
           version="$(node -p 'JSON.parse(require("fs").readFileSync("module.json", "utf8")).version')"
@@ -24,6 +22,7 @@ jobs:
           else
             test "$GITHUB_REF_NAME" = "beta/v$version"
           fi
+          test -s "docs/releases/v$version.md"
       - name: JavaScript checks and unit tests
         run: |
           node --check scripts/main.js
@@ -39,11 +38,11 @@ jobs:
           version="$(node -p 'JSON.parse(require("fs").readFileSync("module.json", "utf8")).version')"
           tag="v$version"
           if gh release view "$tag" >/dev/null 2>&1; then
-            echo "Release $tag already exists; refusing to replace an immutable published version."
+            echo "Release $tag exists; refusing to replace published ZIP."
             exit 1
           fi
           gh release create "$tag" "dist/foundry-drawing-quickbar-$version.zip" "module.json" \
             --target "$GITHUB_SHA" \
             --title "Drawing Tools+ v$version (Beta)" \
-            --notes "Initial GitHub beta for Foundry v14. Native Drawing Quickbar with presets, tools, selected-drawing styling and experimental arrows. Automated and mock tests only; not validated in a live Foundry client. No gameplay script changes from the v0.1.0 baseline. Personal Use Only (No Redistribution) license; see LICENSE.md and README.md. Not yet submitted to Foundry's official directory." \
+            --notes-file "docs/releases/v$version.md" \
             --prerelease

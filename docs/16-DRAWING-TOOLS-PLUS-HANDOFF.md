@@ -62,6 +62,22 @@ v0.1.3 supersedes v0.1.2 and places the Selected Drawings inspector/Lock actions
 - New paths affected: `scripts/main.js`, `scripts/model.js`, `styles/quickbar.css`, tests, changelog/readme/handoff.
 - **Pending user smoke test:** 1) create text containing 'TVRA' in popup; ensure no shortcut switches. 2) edit existing text with native inline editor and type 'VRTA'; ensure no tool changes. 3) select spare drawings and confirm list/actions, Lock, unlock and persistence. 4) verify existing painted gridlines remain intact. 5) test the previous Arrow beta fix and duplicate operation.
 
+## 16.1 update — v0.1.5: direct editing and clear release notes (2026-10-16)
+
+**User reports:** Creating a circle requires manually selecting it afterward; style presets and sliders do not change a selected Drawing. "Style Selected" is unclear, and Edit Text on an existing circle does not display its label. GitHub release descriptions repeat obsolete initial-beta text.
+
+**Implemented (live Foundry validation pending):**
+- A native Drawing created locally while Quickbar is open (rectangle, ellipse, polygon, freehand) schedules switching to Foundry Select and selecting only the new ID, with retries if the placeable has not yet appeared. Same intent for newly created Arrow and Text.
+- One selected unlocked Drawing: presets apply a full style, sliders/colors apply only their named field (debounced); locked and other selected objects never change. Controls display the selected Drawing's appearance without overwriting remembered defaults.
+- Multiple selected Drawings: explicit Apply to N Selected batch action; locked objects skipped. No selection: edit locally remembered style for future Drawings. The four built-in presets are not separate saved custom styles.
+- Edit Text on an existing native ellipse now sets text opacity to 1 along with text, font size and color; geometry, identity and flags are preserved.
+- Readable CHANGELOG.md, README.md and per-version GitHub release notes (docs/releases) replace generic boilerplate. A main-branch workflow synchronizes existing release **descriptions only**, preserving release assets.
+- Module ID remains foundry-drawing-quickbar; v14; Personal Use Only (No Redistribution) license. No background/working group migration.
+
+**Next live smoke test:** Draw a circle, confirm auto-selection/move/resize, change one style without separate action, add visible label with Edit Text, verify original ID and reload. Multi-select two temporary Drawings and confirm explicit batch apply; verify all painted gridlines remain untouched. If a step fails, capture the first browser console error and precise v14 build.
+
+**Status:** Automated/mock tests and packaged ZIP must pass CI before advancing permanent manifest. Live v14 behavior is not yet verified for this beta. Outstanding protected background/working grouping remains GitHub issue #1. Before submitting to Foundry's official directory, the owner should review human-authored public UI/release text for policy compliance.
+
 ## Source of truth and GitHub release boundaries
 
 - Use the actual GitHub source at `rebsiot/drawing-tools-plus` (default branch `main`) and/or the newest verified working ZIP. Handoff notes describe intent but are not code.

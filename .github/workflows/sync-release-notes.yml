@@ -1,0 +1,30 @@
+name: Sync readable GitHub release descriptions
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'docs/releases/**'
+      - '.github/workflows/sync-release-notes.yml'
+  workflow_dispatch:
+permissions:
+  contents: write
+jobs:
+  sync:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Update release descriptions without replacing ZIPs
+        env:
+          GH_TOKEN: ${{ github.token }}
+        shell: bash
+        run: |
+          shopt -s nullglob
+          for note in docs/releases/v*.md; do
+            tag="$(basename "$note" .md)"
+            if gh release view "$tag" >/dev/null 2>&1; then
+              gh release edit "$tag" --notes-file "$note"
+              echo "Updated description for $tag"
+            else
+              echo "Release $tag not yet published; skip"
+            fi
+          done

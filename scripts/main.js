@@ -314,6 +314,8 @@ function closeDock() {
   if (pendingStyleTimer !== null) clearTimeout(pendingStyleTimer);
   pendingStyleTimer = null;
   if (pendingStyle) void flushDirectStylePatch();
+  editingDrawingId = null;
+  editingStyle = null;
   clearFocusMarker();
   exitArrow();
   exitTextPlacement();

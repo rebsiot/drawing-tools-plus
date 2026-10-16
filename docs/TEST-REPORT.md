@@ -1,6 +1,16 @@
-# Test Report — Drawing Quickbar v0.1.4
+# Test Report — Drawing Quickbar v0.1.5
 
 **Date:** 2026-10-16
+
+## v0.1.5 — Direct editing test coverage (2026-10-16)
+
+**Reported live friction:** No automatic selection after drawing a circle; selected presets/fields do not affect it; Style Selected confusing; new circle label invisible.
+
+**Automated tests added:** Style target count and lock exclusion, style draft synchronization, isolated property updates, textAlpha visibility for previously unlabeled ellipse, native createDrawing selection hook and Select mode, release-note metadata and ZIP packaging.
+
+**Pending live checks:** Native shape creation and selection handle interaction; style updates at slider speed; single-selection undo; multi-selection confirmation; circle label after reload; painted gridline integrity. These are not proven by the mocked tests.
+
+**Release notes:** Version-specific release descriptions replace generic v0.1.0 text. Existing release bodies can be updated without replacing ZIP artifacts.
 
 ## v0.1.4 beta — Finder and Edit Text improvements (2026-10-16)
 
