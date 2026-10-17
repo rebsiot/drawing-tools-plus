@@ -30,6 +30,7 @@ jobs:
           node --check scripts/tutorial.js
           node --check scripts/selection.js
           node --check scripts/annotations.js
+          node --check scripts/locate.js
           node --check scripts/batch-delete.js
           npm test
       - name: Package module

@@ -14,6 +14,8 @@ import {toggleNativeDrawingSelection} from "./selection.js";
 import {ribbonVertices, ribbonDrawingData, calloutDrawingData} from "./annotations.js";
 import {planSelectedDrawingDeletion, isDrawingDeletionPlanCurrent,
   commitPlannedDrawingDeletion, drawingDeletionConfirmationHtml} from "./batch-delete.js";
+import {drawingLocateGeometry, locateDrawingScale, drawingFocusFrame,
+  isLocateFrameOversized} from "./locate.js";
 
 const TOOLS = new Set(["select", "rect", "ellipse", "polygon", "freehand", "text"]);
 const KEY_TO_TOOL = {v:"select", r:"rect", e:"ellipse", p:"polygon",
@@ -259,7 +261,7 @@ function createDock() {
   root.setAttribute("aria-label", "Drawing Quickbar");
   root.innerHTML = `
     <div class="dqb-header">
-      <span class="dqb-header-title"><i class="fa-solid fa-pen-ruler" aria-hidden="true"></i> Drawing Quickbar <small>v0.1.18</small></span>
+      <span class="dqb-header-title"><i class="fa-solid fa-pen-ruler" aria-hidden="true"></i> Drawing Quickbar <small>v0.1.19</small></span>
       <div class="dqb-header-actions">
         <button type="button" class="dqb-to-tokens" data-action="tokens" aria-label="Return to Token Controls" title="Return to Token Controls; keep Quickbar open"><i class="fa-solid fa-arrow-pointer" aria-hidden="true"></i> Tokens</button>
         <button type="button" class="dqb-icon" data-action="close" aria-label="Close Drawing Quickbar" title="Close and return to Tokens"><i class="fa-solid fa-xmark"></i></button>
@@ -963,37 +965,44 @@ function clearFocusMarker() {
 function refreshFocusMarker() {
   if (!focusMarker || !canvas?.scene || canvas.scene.id !== focusedSceneId) return;
   const doc = canvas.scene.drawings.get(focusedDrawingId);
-  if (!doc || typeof canvas.clientCoordinatesFromCanvas !== "function") return clearFocusMarker();
-  const center = drawingCenter(doc);
-  if (!center) return clearFocusMarker();
-  const pt = canvas.clientCoordinatesFromCanvas(center);
-  const corner = canvas.clientCoordinatesFromCanvas({x: doc.x, y: doc.y});
-  const opposite = canvas.clientCoordinatesFromCanvas({
-    x: doc.x + (doc.shape?.width || 0), y: doc.y + (doc.shape?.height || 0)
-  });
-  if (![pt.x,pt.y,corner.x,corner.y,opposite.x,opposite.y].every(Number.isFinite)) return;
-  const w = Math.min(360, Math.max(82, Math.abs(opposite.x - corner.x) + 24));
-  const h = Math.min(260, Math.max(82, Math.abs(opposite.y - corner.y) + 24));
-  focusMarker.style.left = Math.round(pt.x) + "px";
-  focusMarker.style.top = Math.round(pt.y) + "px";
-  focusMarker.style.width = Math.round(w) + "px";
-  focusMarker.style.height = Math.round(h) + "px";
+  const geometry = drawingLocateGeometry(doc);
+  if (!geometry || typeof canvas.clientCoordinatesFromCanvas !== "function") return clearFocusMarker();
+  const frame = drawingFocusFrame(geometry,
+    point => canvas.clientCoordinatesFromCanvas(point));
+  if (!frame) return clearFocusMarker();
+  focusMarker.style.left = Math.round(frame.x) + "px";
+  focusMarker.style.top = Math.round(frame.y) + "px";
+  focusMarker.style.width = Math.round(frame.width) + "px";
+  focusMarker.style.height = Math.round(frame.height) + "px";
+  focusMarker.style.transform = `translate(-50%, -50%) rotate(${frame.rotation}deg)`;
+  // Native minZoom can prevent an enormous Drawing's borders from entering view.
+  // In that case the original-size frame remains accurate, but keep its label centered.
+  const oversized = isLocateFrameOversized(frame,
+    canvas.screenDimensions ?? [window.innerWidth, window.innerHeight]);
+  focusMarker.classList.toggle("dqb-focus-oversize", oversized);
+  const caption = focusMarker.querySelector(".dqb-focus-caption");
+  if (caption) {
+    caption.style.transform = oversized
+      ? `translate(-50%, -50%) rotate(${-frame.rotation}deg)`
+      : `translateX(-50%) rotate(${-frame.rotation}deg)`;
+    caption.title = oversized ? "Drawing bounds extend outside this view at the current zoom" : "";
+  }
 }
 async function locateDrawing(id) {
   if (!isUsable()) return notify("Open a Scene to locate Drawings.");
   const doc = canvas.scene.drawings.get(id);
-  const center = drawingCenter(doc);
-  if (!canSeeDrawing(game.user, doc) || !center)
+  const geometry = drawingLocateGeometry(doc);
+  if (!canSeeDrawing(game.user, doc) || !geometry)
     return notify("Drawing location is unavailable.");
   clearFocusMarker();
   const request = ++focusSequence;
   const sceneId = canvas.scene.id;
   try {
-    const width = Math.abs(doc.shape?.width ?? 0), height = Math.abs(doc.shape?.height ?? 0);
-    const view = {x: center.x, y: center.y, duration: 450};
-    if (Math.max(width,height) < 120) {
-      view.scale = Math.min(2, Math.max(1.3, canvas.stage?.scale?.x ?? 1));
-    }
+    const view = {x: geometry.center.x, y: geometry.center.y, duration: 450};
+    const zoom = locateDrawingScale(geometry,
+      canvas.screenDimensions ?? [window.innerWidth, window.innerHeight],
+      canvas.stage?.scale?.x ?? 1, canvas.dimensions?.scale);
+    if (zoom !== null) view.scale = zoom;
     await canvas.animatePan(view);
     if (!dock || !canvas.scene || canvas.scene.id !== sceneId || request !== focusSequence) return;
     focusMarker = documentCreate("div", "dqb-focus-marker");
@@ -1743,6 +1752,7 @@ Hooks.once("ready", () => {
   Hooks.on("updateDrawing", () => {
     refreshSelectedPanel();
     refreshFinder();
+    refreshFocusMarker();
   });
   Hooks.on("createDrawing", (doc, _options, userId) => {
     refreshSelectedPanel();
@@ -1756,6 +1766,7 @@ Hooks.once("ready", () => {
   Hooks.on("deleteDrawing", () => {
     refreshSelectedPanel();
     refreshFinder();
+    refreshFocusMarker();
   });
   Hooks.on("canvasPan", refreshFocusMarker);
   Hooks.on("renderSceneControls", () => {
@@ -1780,5 +1791,5 @@ Hooks.once("ready", () => {
     // A tool switch or Scene navigation should never leave an invisible input shield over the canvas.
     if (arrowOverlay && !arrowOverlay.contains(event.target) && !dock?.contains(event.target) && !canvas?.drawings?.active) exitArrow();
   });
-  console.info(`${MODULE_ID} | v0.1.18 ready (Foundry v14 native Drawing workflow)`);
+  console.info(`${MODULE_ID} | v0.1.19 ready (Foundry v14 native Drawing workflow)`);
 });

@@ -1,5 +1,12 @@
 # Drawing Tools+ — Changelog
 
+## v0.1.19 - Locate full Drawing bounds (beta; 2026-10-17)
+- **Fixed:** Locate no longer truncates large Drawing highlights at 360 by 260 pixels. Its temporary outline follows the actual native Drawing dimensions and rotation, with legible padding for small objects.
+- **Improved:** Locate zooms out when the selected Drawing is too large to fit the viewport at the current zoom. Native v14 minimum/maximum zoom limits are respected; when they prevent the full outline from fitting, a centered caption still identifies the Drawing.
+- **Preserved:** Existing 7-second local pulse, All Drawings inventory, locked-gridline protection, player permissions, selected-Drawing operations, Token Controls handoff and Multi-Delete. No Scene, Drawing, author, flag or permission migration.
+- **Verification:** Automated geometry/source regression suite and complete installable ZIP; live Foundry v14 Locate tests remain pending.
+
+
 ## v0.1.18 — Multi-Delete (public beta; 2026-10-16)
 - **Added:** **Delete N Selected** under Selected Drawings, available with at least two deletable native Drawings in the current selection. Its button is distinct from per-object Deselect/Delete.
 - **Safety:** Native Foundry DialogV2 confirms an explicit list of targets (name, kind, native ID) and indicates locked or unauthorized exclusions. Cancel and dialog dismissal make no changes. Confirmed deletion aborts if Scene, selection, document identity, author, lock or deletion permission changed. Deletion uses one native Scene Drawing operation for the exact authorized IDs.

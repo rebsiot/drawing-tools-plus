@@ -8,6 +8,22 @@
 **Status:** 11/11 automated/mock tests passed; **live Foundry test not yet performed**. No official Foundry package publication has occurred.
 **Code provenance:** first source import from the 0.1.0 ZIP; metadata/documentation/CI additions only, not a tested functionality upgrade.
 
+## Drawing Tools+ v0.1.19 - Full-size Locate highlight (2026-10-17)
+
+**Issue:** In a live Foundry v14 session, GM used All Drawings -> Locate on a very large rectangle and saw only a small center halo instead of the object border. Confirmed source cause: `refreshFocusMarker()` capped the temporary HTML frame to 360x260 CSS pixels while leaving the camera at the prior zoom for large Drawings.
+
+**Verified source:** `rebsiot/drawing-tools-plus` main/release `v0.1.18`, commit `1b3a825ec96977530b741b82ce3518779eed9d4b`. Reconstructed full module from GitHub Actions package for this exact main commit. Actual installed build is not available; GM reported the behavior while using current Drawing Tools+.
+
+**Fix:** A new pure `scripts/locate.js` derives size/center and rotation from native Drawing geometry, calculates fit-to-viewport zoom with the official v14 `canvas.screenDimensions` and `canvas.dimensions.scale` constraints, and projects the complete rectangle (without hard-coded 360x260 cap) to the existing local pulse overlay. The frame rotates with Drawing rotation. A central caption stays visible when native minimum zoom cannot fit enormous artwork. Canvas pan, window resize and Drawing updates/deletes refresh or clear the frame.
+
+**Preserve:** Locate is local-only, never uses broadcast pings, and does not create/edit/delete Scene or Drawing data. Native lock state, IDs, author, permissions, All Drawings, style/selection, Multi-Delete and Token Controls handoff unchanged. No world migrations. Source file and previous ZIP are rollback baseline.
+
+**Automated:** New unit/source checks for 8000x3500 rectangles, fit zoom, native zoom limits, rotation, negative dimensions, small shapes, invalid points and non-mutating behavior; full existing tests and ZIP package verification. **Live test of v0.1.19 still pending.**
+
+**One next test:** In a backed-up disposable Scene, locate a rectangle spanning several thousand scene pixels; its border should visibly frame the whole Drawing after fit-to-view, rather than a small box at the center. If the Drawing cannot fit at Foundry minimum zoom, its caption should remain visible near its center. Verify a small locked Drawing and pan/resize next. Revert to v0.1.18 if unexpected, with no user data migration.
+
+**Coordination:** Repo handoff historically uses a `16` thread label while the revised St. Louis project index assigns `16` to independent WoD20 Sheet Buttons. Reconcile the documentation owner number separately; do not rename this established module ID for a numbering conflict. No shared data contract change.
+
 ## 16.2 — v0.1.18 Multi-Delete public beta (2026-10-16)
 
 **Request:** Add Multi-Delete and publish it immediately to the existing GitHub repository. A future Free/Patreon split is an idea only; **do not close or rename this repository or change the module ID**. The v0.1.18 milestone is a public beta, built by GitHub Actions as a complete version-pinned ZIP.

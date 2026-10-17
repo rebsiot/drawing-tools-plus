@@ -1,6 +1,18 @@
-# Test Report — Drawing Quickbar v0.1.18
+# Test Report — Drawing Quickbar v0.1.19
 
 **Date:** 2026-10-16
+
+## v0.1.19 - Full Drawing Locate (2026-10-17)
+
+**Baseline:** Verified v0.1.18 GitHub main commit `1b3a825ec96977530b741b82ce3518779eed9d4b`, complete module extracted from the GitHub Actions validation artifact. No live source access. Root cause: fixed-size frame caps at 360x260 CSS pixels and missing fit-to-viewport camera zoom for large Drawing documents.
+
+**Implementation:** Pure geometry for Drawing location including negative dimensions and rotation; native Foundry v14 viewport zoom fit, clamped by native scale min/max; local temporary outline exactly follows Drawing dimensions (with small shape minimum) and rotates with it. Huge Drawings that cannot fit native zoom keep a centered caption. Pan/zoom/resize/delete refresh/clear the marker. No Scene data writes or remote pings.
+
+**Automated:** `npm test`, `node --check`, and full standalone versioned ZIP build/extraction verification. See output for exact counts. Source tests cover multiple shape sizes and no hard-coded clipping. Source-level mock tests cannot validate actual Foundry canvas camera or CSS rendering.
+
+**Live Foundry v14:** **Not yet run on v0.1.19.** GM's v0.1.18 report establishes the bug, not the fix. Next: Locate giant locked rectangle, confirm entire visible border/zoom, test small and rotated shapes, pan/resize; check no document flags/locks/IDs changed. Native minimum zoom may still clip exceptionally large Drawings, but central label remains visible.
+
+**Install/rollback:** Back up world and module folder; install the complete v0.1.19 ZIP once released. Revert to v0.1.18 if necessary. No data migration; actual user-created Drawing edits or deletes require a world snapshot for recovery.
 
 ## v0.1.18 — Multi-Delete (2026-10-16)
 

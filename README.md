@@ -1,4 +1,4 @@
-# Drawing Tools+ — v0.1.18 Beta
+# Drawing Tools+ — v0.1.19 Beta
 
 **Foundry:** v14 · **Module ID:** `foundry-drawing-quickbar` · **License:** [Personal Use Only (No Redistribution)](LICENSE.md)
 
@@ -7,6 +7,9 @@ A small floating toolbar for **native Foundry Scene Drawings**. No extra drawing
 **Launcher icon:** Both Token Controls and Drawing Controls now show the same **pen-and-ruler** symbol as the Drawing Quickbar header—not Foundry's generic Palette icon. This is a visual change only; both buttons still open the same toolbar.
 
 ## Core workflow
+
+- **Locate whole Drawing:** **All Drawings -> Locate** frames the *actual* Drawing border, including oversized rectangles; it zooms out locally when needed to show the complete bounds and follows any pan/resize. Rotated Drawings are outlined at their native angle. Native Foundry minimum zoom can keep a Scene-sized rectangle partly outside the viewport; in that case, the Drawing label is shown in the center instead of disappearing offscreen. This is a temporary, local-only overlay: no Scene Drawing or lock data changes.
+
 
 - **Multi-Delete:** In **All Drawings**, select two or more editable Drawings. Under **Selected Drawings**, click **Delete N Selected**. A native confirmation lists *every* Drawing that will be deleted by name, type and ID and identifies skipped locked/unauthorized ones. Cancel creates no changes. The operation uses one native Scene Drawing delete; the selection and permissions are checked again before deletion. **Undo Style Change cannot recover deleted artwork.** One-object Delete remains available on each Drawing.
 
@@ -39,18 +42,21 @@ No world-wide permission is automatically changed by installing the module. Lega
 
 ## Install and updates
 
-**Public beta release:** v0.1.18 is published on GitHub as a complete installable module ZIP. The permanent Foundry update manifest is `https://raw.githubusercontent.com/rebsiot/drawing-tools-plus/main/module.json`. Use **Check Update → Update** when this manifest points to v0.1.18, or install the versioned ZIP manually. No Drawing data migration occurs during installation.
+**Public beta release:** v0.1.19 will be published on GitHub as a complete installable module ZIP. The permanent Foundry update manifest is `https://raw.githubusercontent.com/rebsiot/drawing-tools-plus/main/module.json`. Use **Check Update → Update** when this manifest points to v0.1.19, or install the versioned ZIP manually. No Drawing data migration occurs during installation.
 
 1. Back up your entire Foundry world and `Z:\Data\modules\foundry-drawing-quickbar\` folder.
 2. Stop Foundry. Extract the ZIP contents into `Z:\Data\modules\foundry-drawing-quickbar\` (the `module.json` file must be directly in that folder).
-3. Restart Foundry, check v0.1.18 is shown, and hard-refresh the browser. The module remains enabled under the same ID.
-4. Test on a disposable Scene before using Multi-Delete on real map artwork.
+3. Restart Foundry, check v0.1.19 is shown, and hard-refresh the browser. The module remains enabled under the same ID.
+4. Test **Locate** on a disposable Scene with a large locked rectangle first. Multi-Delete still requires separate confirmation.
 
 **Future repository split:** This preview retains the existing module ID and known settings/flags. GitHub/premium distribution is deferred until a new repository and release channel are ready.
 
 **Back up the world before testing.** No automatic Drawing imports, IDs, Scene geometry changes, or migrations occur on installation.
 
 ## Live smoke-test checklist
+
+**New v0.1.19 Locate test:** On a backed-up test Scene, locate a large rectangle that spans most of the map. Locate should pan and zoom out where the Foundry v14 view permits and trace the full border, not highlight only a 360x260-pixel patch in its center. Locate a small rectangle next, then a rotated Drawing; their frames should follow size/orientation. Pan, zoom and resize a disposable Drawing while the outline is visible, and verify the outline updates without modifying the Drawing. If Foundry has reached its minimum zoom, a centered caption should remain visible even if some borders are outside the viewport. Confirm existing locked gridlines remain locked. **Live test pending.**
+
 
 **Multi-Delete first test:** On a disposable backed-up Scene, create four expendable Drawings and lock one. Select three unlocked Drawings using **All Drawings → Select**; confirm **Delete 3 Selected** displays all three names/IDs. **Cancel** first and confirm nothing is removed. Confirm a second time and check exactly those three Drawings are deleted. Then select two owned drawings as a player with the GM's artwork present: only owned, unlocked Drawings must be deletable. Verify locked gridlines, other players' Drawings, and Locate remain unchanged. Multi-Delete has **not yet been live-tested in Foundry v14**.
 
@@ -72,6 +78,6 @@ Report the exact Foundry v14 build and the **first browser console error** if a 
 
 The Quickbar uses native Drawing documents and native permissions. It does not provide custom user-named style libraries, grouping/layer replacement, advanced snapping, or a separate undo history. Background/Working groups remain planned, not implemented.
 
-To revert module code, restore your backed-up v0.1.17 folder or install [v0.1.17](https://github.com/rebsiot/drawing-tools-plus/releases/tag/v0.1.17). This does **not** undo saved Scene document changes or restore deleted Drawings—keep your matching world backup.
+To revert module code, restore your backed-up v0.1.18 folder or install [v0.1.18](https://github.com/rebsiot/drawing-tools-plus/releases/tag/v0.1.18). This does **not** undo saved Scene document changes or restore deleted Drawings—keep your matching world backup.
 
-[Readable Changelog](CHANGELOG.md) · [Release Notes](docs/releases/v0.1.18.md) · [Tests](docs/TEST-REPORT.md) · [Development Handoff](docs/16-DRAWING-TOOLS-PLUS-HANDOFF.md)
+[Readable Changelog](CHANGELOG.md) · [Release Notes](docs/releases/v0.1.19.md) · [Tests](docs/TEST-REPORT.md) · [Development Handoff](docs/16-DRAWING-TOOLS-PLUS-HANDOFF.md)
