@@ -1,6 +1,6 @@
-# Drawing Tools+ — v0.1.20 Beta
+# Drawing Tools+ — v0.1.21 Beta
 
-**Foundry:** v14 · **Module Manager name:** Drawing Tools+ · **Module ID:** `foundry-drawing-quickbar` · **License:** [Personal Use Only (No Redistribution)](LICENSE.md)
+**Foundry:** v14 · **Module Manager name:** AFT Drawing Tools+ · **Module ID:** `foundry-drawing-quickbar` · **License:** [Personal Use Only (No Redistribution)](LICENSE.md)
 
 A small floating toolbar for **native Foundry Scene Drawings**. No extra drawing engine or World of Darkness dependency.
 
@@ -42,11 +42,11 @@ No world-wide permission is automatically changed by installing the module. Lega
 
 ## Install and updates
 
-**Public beta release:** v0.1.20 is published on GitHub as a complete installable module ZIP. The permanent Foundry update manifest is `https://raw.githubusercontent.com/rebsiot/drawing-tools-plus/main/module.json`. Use **Check Update → Update** when this manifest points to v0.1.20, or install the versioned ZIP manually. No Drawing data migration occurs during installation.
+**Public beta release:** v0.1.21 is published on GitHub as a complete installable module ZIP. The permanent Foundry update manifest is `https://raw.githubusercontent.com/rebsiot/drawing-tools-plus/main/module.json`. Use **Check Update → Update** when this manifest points to v0.1.21, or install the versioned ZIP manually. No Drawing data migration occurs during installation.
 
 1. Back up your entire Foundry world and `Z:\Data\modules\foundry-drawing-quickbar\` folder.
 2. Stop Foundry. Extract the ZIP contents into `Z:\Data\modules\foundry-drawing-quickbar\` (the `module.json` file must be directly in that folder).
-3. Restart Foundry, check v0.1.20 is shown, and hard-refresh the browser. The module remains enabled under the same ID.
+3. Restart Foundry, check v0.1.21 is shown, and hard-refresh the browser. The module remains enabled under the same ID.
 4. Test **Locate** on a disposable Scene with a large locked rectangle first. Multi-Delete still requires separate confirmation.
 
 **Future repository split:** This preview retains the existing module ID and known settings/flags. GitHub/premium distribution is deferred until a new repository and release channel are ready.
@@ -80,4 +80,4 @@ The Quickbar uses native Drawing documents and native permissions. It does not p
 
 To revert module code, restore your backed-up v0.1.18 folder or install [v0.1.18](https://github.com/rebsiot/drawing-tools-plus/releases/tag/v0.1.18). This does **not** undo saved Scene document changes or restore deleted Drawings—keep your matching world backup.
 
-[Readable Changelog](CHANGELOG.md) · [Release Notes](docs/releases/v0.1.20.md) · [Tests](docs/TEST-REPORT.md) · [Development Handoff](docs/16-DRAWING-TOOLS-PLUS-HANDOFF.md)
+[Readable Changelog](CHANGELOG.md) · [Release Notes](docs/releases/v0.1.21.md) · [Tests](docs/TEST-REPORT.md) · [Development Handoff](docs/16-DRAWING-TOOLS-PLUS-HANDOFF.md)

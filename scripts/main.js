@@ -261,7 +261,7 @@ function createDock() {
   root.setAttribute("aria-label", "Drawing Quickbar");
   root.innerHTML = `
     <div class="dqb-header">
-      <span class="dqb-header-title"><i class="fa-solid fa-pen-ruler" aria-hidden="true"></i> Drawing Quickbar <small>v0.1.20</small></span>
+      <span class="dqb-header-title"><i class="fa-solid fa-pen-ruler" aria-hidden="true"></i> Drawing Quickbar <small>v0.1.21</small></span>
       <div class="dqb-header-actions">
         <button type="button" class="dqb-to-tokens" data-action="tokens" aria-label="Return to Token Controls" title="Return to Token Controls; keep Quickbar open"><i class="fa-solid fa-arrow-pointer" aria-hidden="true"></i> Tokens</button>
         <button type="button" class="dqb-icon" data-action="close" aria-label="Close Drawing Quickbar" title="Close and return to Tokens"><i class="fa-solid fa-xmark"></i></button>
@@ -1791,5 +1791,5 @@ Hooks.once("ready", () => {
     // A tool switch or Scene navigation should never leave an invisible input shield over the canvas.
     if (arrowOverlay && !arrowOverlay.contains(event.target) && !dock?.contains(event.target) && !canvas?.drawings?.active) exitArrow();
   });
-  console.info(`${MODULE_ID} | v0.1.20 ready (Foundry v14 native Drawing workflow)`);
+  console.info(`${MODULE_ID} | v0.1.21 ready (Foundry v14 native Drawing workflow)`);
 });

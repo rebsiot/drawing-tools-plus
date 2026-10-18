@@ -8,6 +8,18 @@
 **Status:** 11/11 automated/mock tests passed; **live Foundry test not yet performed**. No official Foundry package publication has occurred.
 **Code provenance:** first source import from the 0.1.0 ZIP; metadata/documentation/CI additions only, not a tested functionality upgrade.
 
+## G01 - v0.1.21 Module Manager name correction (2026-10-18)
+
+**Request:** Display precisely **AFT Drawing Tools+** in the Foundry Manage Modules enabled/disabled list, correcting the unprefixed v0.1.20 title. This is a user-approved naming fix, not authorization to rename the repository, module ID or internal Quickbar interface.
+
+**Exact source:** GitHub `rebsiot/drawing-tools-plus`, verified main/release v0.1.20 commit `681a0cc03e4baa4b8b55e9336a39a7d201676ede`. The full module ZIP was recovered from GitHub Actions for that source. Current installed source/version has not been inspected.
+
+**Scope:** `module.json.title` becomes `AFT Drawing Tools+`. The immutable ID stays `foundry-drawing-quickbar`; the manifest URL, settings keys, flags, Scene Drawings, ownership, locks, existing player tools, Locate and Multi-Delete remain unaffected. Versioned v0.1.21 beta release enables Foundry to recognize the update. Runtime script changes are version-string only. No migration.
+
+**Tests/status:** Node and extracted-package tests plus verified GitHub release/manifest checks before distribution; label any live testing separately. One live smoke test: install v0.1.21, open Manage Modules, verify one `AFT Drawing Tools+` entry retaining the former enabled state, and open the existing Quickbar. Roll back to v0.1.20 if needed; world backup covers unrelated Drawings edited or deleted during play.
+
+**Standards:** G01 owns system-independent Drawing Tools+. The public README screenshot/first-use cleanup is for a later approved functional release once an authorized screenshot is available, not this title-only release. Existing 16-series owner references remain historical and do not supersede WoD20 Sheet Buttons.
+
 ## G01 — v0.1.20 Drawing Tools+ Module Manager title (2026-10-18)
 
 **Approved request:** Make the module recognizable under Foundry's Manage Modules enabled/disabled list, using its public product name **Drawing Tools+**. Do not rename the GitHub repository or the module ID. G01 is the proposed General Foundry Tools documentation owner; it is not part of the public module title or persisted identifiers. Earlier `16.K` records are historical, not an instruction to replace WoD20 Sheet Buttons component 16.

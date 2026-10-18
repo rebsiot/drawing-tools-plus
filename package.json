@@ -1,6 +1,6 @@
 {
   "name": "foundry-drawing-quickbar",
-  "version": "0.1.20",
+  "version": "0.1.21",
   "private": true,
   "type": "module",
   "scripts": {

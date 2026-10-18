@@ -1,5 +1,10 @@
 # Drawing Tools+ — Changelog
 
+## v0.1.21 - AFT module list prefix (beta; 2026-10-18)
+- **Improved:** The Foundry Manage Modules entry now displays **AFT Drawing Tools+** so it is easy to recognize among enabled and disabled add-ons.
+- **Preserved:** Existing `foundry-drawing-quickbar` module ID, update manifest, settings, Scene Drawing data, permissions, and all drawing/Locate/Multi-Delete behavior. No data migration.
+- **Verification:** Automated tests and installable ZIP verification. The exact display name and retained enabled state still require a live Foundry v14 check; v0.1.20 is the rollback build.
+
 ## v0.1.20 — Clearer Module Manager name (beta; 2026-10-18)
 - **Improved:** Foundry `module.json` now lists this module as **Drawing Tools+**, matching the GitHub project name, so it is easier to recognize in Manage Modules and see whether it is enabled.
 - **Preserved:** Same `foundry-drawing-quickbar` ID, preferences, user flags, existing Scene Drawing data, author/lock permissions and tools. The floating UI is still called Drawing Quickbar. No migration.

@@ -1,3 +1,17 @@
+# Test Report - AFT Drawing Tools+ v0.1.21
+
+## v0.1.21 - AFT Module Manager prefix (2026-10-18)
+
+**Verified source:** GitHub `rebsiot/drawing-tools-plus`, main/release `v0.1.20`, exact commit `681a0cc03e4baa4b8b55e9336a39a7d201676ede`. Baseline full installable module was recovered from the GitHub Actions validation artifact for that commit, and files were compared to the existing v0.1.20 local source. The installed Foundry version was not independently inspected.
+
+**Change:** Set `module.json.title` to `AFT Drawing Tools+`, bump ZIP, package and Quickbar version to 0.1.21, and update user-facing install notes. All other runtime functions and original module ID are unchanged; existing enabled state is not written by the module.
+
+**Automated:** Run full Node test suite, all JS syntax checks, ZIP integrity, manifest/license checks and clean-extracted ZIP tests. Record the results separately from live use. There is no world data migration.
+
+**Live test pending:** After updating in Foundry v14, verify `AFT Drawing Tools+` appears once in **Manage Modules**, with the expected enabled checkbox state. Open the existing Quickbar and verify a disposable Drawing can be selected and located. The earlier v0.1.19/v0.1.20 live regressions remain separately pending.
+
+**Rollback:** Complete v0.1.20 beta ZIP and GitHub tag; world backup necessary only for user edits/deletions during play, not for this metadata change.
+
 # Test Report — Drawing Tools+ v0.1.20
 
 ## v0.1.20 — Module Manager display name (2026-10-18)
