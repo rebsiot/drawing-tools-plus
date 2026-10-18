@@ -8,6 +8,16 @@
 **Status:** 11/11 automated/mock tests passed; **live Foundry test not yet performed**. No official Foundry package publication has occurred.
 **Code provenance:** first source import from the 0.1.0 ZIP; metadata/documentation/CI additions only, not a tested functionality upgrade.
 
+## G01 — v0.1.20 Drawing Tools+ Module Manager title (2026-10-18)
+
+**Approved request:** Make the module recognizable under Foundry's Manage Modules enabled/disabled list, using its public product name **Drawing Tools+**. Do not rename the GitHub repository or the module ID. G01 is the proposed General Foundry Tools documentation owner; it is not part of the public module title or persisted identifiers. Earlier `16.K` records are historical, not an instruction to replace WoD20 Sheet Buttons component 16.
+
+**Exact source baseline:** Existing published `v0.1.19` beta GitHub commit `b0c04410be3b2ccd55e70373fdc3922537363d49`; `module.json` title was `Drawing Quickbar` and ID `foundry-drawing-quickbar`. Last installed version remains unknown (no live filesystem access).
+
+**Change:** `module.json.title` becomes `Drawing Tools+`, while `id`, `manifest`, preferences, Drawing flags, native permissions, existing Scene data and all gameplay code remain unchanged. Versioned v0.1.20 ZIP and release notes ensure Foundry can detect the update. Quickbar header still describes the interface; only its version text changes.
+
+**Tests/status:** Automated source/manifest and clean-ZIP regression tests planned/run as recorded in test report. **Live Module Manager test required**: after upgrade, open Manage Modules, confirm the displayed name and the original enabled checkbox, then open the existing Quickbar. Revert to v0.1.19 if needed. The public README screenshot/feature cleanup specified in `G01-drawing-tools.txt` remains assigned to the next approved functional release, not this metadata-only update, pending an authorized UI screenshot.
+
 ## Drawing Tools+ v0.1.19 - Full-size Locate highlight (2026-10-17)
 
 **Issue:** In a live Foundry v14 session, GM used All Drawings -> Locate on a very large rectangle and saw only a small center halo instead of the object border. Confirmed source cause: `refreshFocusMarker()` capped the temporary HTML frame to 360x260 CSS pixels while leaving the camera at the prior zoom for large Drawings.

@@ -1,4 +1,17 @@
-# Test Report — Drawing Quickbar v0.1.19
+# Test Report — Drawing Tools+ v0.1.20
+
+## v0.1.20 — Module Manager display name (2026-10-18)
+
+**Verified source:** v0.1.19 GitHub tag/main `b0c04410be3b2ccd55e70373fdc3922537363d49`. Complete installable package source and original script blobs were matched against GitHub, and v0.1.19 release assets inspected.
+
+**Scope:** Change `module.json.title` from Drawing Quickbar to Drawing Tools+, matching the GitHub repository branding. Bump manifest/package/header versions; preserve stable `module.json` URL and unchanged module ID. No Scene Drawing writes, migrations, permission, gameplay, or settings changes. Existing Drawing Quickbar toolbar wording remains unchanged because only the Module Manager label was requested.
+
+**Automated:** Entire Node test suite, JavaScript syntax checks, ZIP integrity, extracted package suite and verification of unchanged source/ID; exact results recorded at release. No live Foundry test was performed by the assistant.
+
+**Next live test:** Install/upgrade v0.1.20 in Foundry v14, open Game Settings -> Manage Modules and confirm the module entry is **Drawing Tools+**, retaining its previous enabled state; open the Quickbar and test Locate and Multi-Delete on expendable shapes. Revert to v0.1.19 if an unexpected change occurs.
+
+**Rollback:** Restore prior module folder/ZIP; use a world backup to recover any drawings later deleted by user action. No data migration in this release.
+
 
 **Date:** 2026-10-16
 

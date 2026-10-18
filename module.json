@@ -1,9 +1,9 @@
 {
   "id": "foundry-drawing-quickbar",
   "type": "module",
-  "title": "Drawing Quickbar",
+  "title": "Drawing Tools+",
   "description": "A native Foundry v14 Drawing Quickbar for GMs and players with drawing permission; player edits are limited to their own drawings.",
-  "version": "0.1.19",
+  "version": "0.1.20",
   "authors": [
     {
       "name": "St. Louis v2 Tools"
@@ -24,5 +24,5 @@
   "readme": "README.md",
   "bugs": "https://github.com/rebsiot/drawing-tools-plus/issues",
   "changelog": "CHANGELOG.md",
-  "download": "https://github.com/rebsiot/drawing-tools-plus/releases/download/v0.1.19/foundry-drawing-quickbar-0.1.19.zip"
+  "download": "https://github.com/rebsiot/drawing-tools-plus/releases/download/v0.1.20/foundry-drawing-quickbar-0.1.20.zip"
 }

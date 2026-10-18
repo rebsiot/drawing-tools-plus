@@ -1,5 +1,10 @@
 # Drawing Tools+ — Changelog
 
+## v0.1.20 — Clearer Module Manager name (beta; 2026-10-18)
+- **Improved:** Foundry `module.json` now lists this module as **Drawing Tools+**, matching the GitHub project name, so it is easier to recognize in Manage Modules and see whether it is enabled.
+- **Preserved:** Same `foundry-drawing-quickbar` ID, preferences, user flags, existing Scene Drawing data, author/lock permissions and tools. The floating UI is still called Drawing Quickbar. No migration.
+- **Verification:** Node tests, manifest/ZIP validation; new name needs a real Foundry Module Manager check. Previous v0.1.19 beta remains rollback.
+
 ## v0.1.19 - Locate full Drawing bounds (beta; 2026-10-17)
 - **Fixed:** Locate no longer truncates large Drawing highlights at 360 by 260 pixels. Its temporary outline follows the actual native Drawing dimensions and rotation, with legible padding for small objects.
 - **Improved:** Locate zooms out when the selected Drawing is too large to fit the viewport at the current zoom. Native v14 minimum/maximum zoom limits are respected; when they prevent the full outline from fitting, a centered caption still identifies the Drawing.
