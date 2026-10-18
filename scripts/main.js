@@ -1,5 +1,6 @@
 import {
   MODULE_ID, DEFAULT_PREFS, PRESETS, normalizePrefs, stylePatch,
+  effectivePreset, presetEditorStyle, savePreset, restorePreset, presetStylesDiffer,
   snapshotStyle, arrowPoints, arrowDocumentData, duplicateDrawingData, textDocumentData,
   drawingLabel, drawingCenter, findSceneDrawings, filterLockedDrawings, editTextPatch,
   stylePreferencesFromDrawing, singleStylePatch, styleTargetMode, drawingAppearancePatch,
@@ -43,6 +44,10 @@ let focusTimer = null;
 let focusSequence = 0;
 let editingDrawingId = null;
 let editingStyle = null;
+let customizingPreset = null;
+let presetDraft = null;
+let presetOriginal = null;
+let presetDirty = false;
 let pendingStyle = null;
 let pendingStyleTimer = null;
 let styleWriteQueue = Promise.resolve();
@@ -55,7 +60,7 @@ let saveTimer = null;
 
 function notify(message, type = "warn") {
   const n = ui?.notifications;
-  n?.[type]?.(`[Drawing Quickbar] ${message}`);
+  n?.[type]?.(`[AFT Drawing Tools+] ${message}`);
 }
 function isUsable() {
   return Boolean(canUseDrawingQuickbar(game?.user) &&
@@ -75,7 +80,7 @@ function safeSave() {
 function activeStyle() { return editingStyle ?? preferences; }
 function renderStyleInputs() {
   if (!dock) return;
-  const style = activeStyle();
+  const style = presetDraft ?? activeStyle();
   for (const property of ["strokeColor", "fillColor", "textColor", "strokeWidth", "fillAlpha", "fontSize"]) {
     const input = dock.querySelector(`[name="${property}"]`);
     if (input) input.value = style[property];
@@ -85,9 +90,9 @@ function renderStyleInputs() {
   dock.querySelector('[name="arrowEnds"]').value = preferences.arrowEnds;
   dock.querySelector('[name="arrowHeadShape"]').value = preferences.arrowHeadShape;
   const selected = selectedDrawingObjects();
-  const selectedArrow = selected.length === 1 &&
+  const selectedArrow = !customizingPreset && selected.length === 1 &&
     canEdit(selected[0]?.document) && isQuickbarSilhouette(selected[0]?.document);
-  const selectedPen = selected.length === 1 && selected[0]?.document?.shape?.type === "f";
+  const selectedPen = !customizingPreset && selected.length === 1 && selected[0]?.document?.shape?.type === "f";
   const width = dock.querySelector('[name="strokeWidth"]');
   if (width) {
     width.disabled = selectedArrow;
@@ -112,6 +117,7 @@ function updateDockInputs() {
   renderStyleInputs();
   refreshToolHighlight();
   refreshSelectedPanel();
+  refreshPresetEditor();
 }
 function synchronizeStyleTarget(selected) {
   const mode = styleTargetMode(selected.map(item => ({
@@ -125,7 +131,10 @@ function synchronizeStyleTarget(selected) {
   }
   dock.classList.toggle("dqb-multi-selection", mode.mode === "batch");
   const hint = dock.querySelector('[data-role="style-scope"]');
-  if (hint) hint.textContent = mode.mode === "single"
+  if (customizingPreset) {
+    if (hint) hint.textContent = "Editing the " + presetDisplayName(customizingPreset) +
+      " preset only. Style controls will NOT change selected Drawings.";
+  } else if (hint) hint.textContent = mode.mode === "single"
     ? (isQuickbarArrow(selected[0]?.document)
       ? (selected[0]?.document?.shape?.type === "f"
           ? "Chevron head: selected Drawing appearance follows its native shape."
@@ -137,14 +146,106 @@ function synchronizeStyleTarget(selected) {
       ? `${mode.count} unlocked selected. Adjust the controls, then Apply to All Selected.`
       : selected.length && !selected.some(item => canEdit(item.document))
         ? "Read-only: you can edit only your own unlocked Drawings."
-        : "Setting new-Drawing defaults. Presets are built in; no saving required.";
+        : "Setting new-Drawing defaults. Click Customize Presets to edit a button.";
   const button = dock.querySelector('[data-action="apply-selected"]');
   if (button) {
     button.textContent = mode.mode === "batch"
       ? `Apply to ${mode.count} Selected` : "Apply to All Selected";
-    button.disabled = mode.mode !== "batch" || !mode.count;
+    button.disabled = Boolean(customizingPreset) || mode.mode !== "batch" || !mode.count;
   }
 }
+const PRESET_LABELS = Object.freeze({outline: "Outline", danger: "Danger",
+  highlight: "Highlight", filled: "Filled"});
+function presetDisplayName(key) { return PRESET_LABELS[key] ?? "Preset"; }
+function refreshPresetEditor() {
+  if (!dock) return;
+  const active = Boolean(customizingPreset);
+  const customize = dock.querySelector('[data-action="customize-presets"]');
+  const panel = dock.querySelector('.dqb-preset-editor');
+  if (customize) {
+    customize.textContent = active ? "Done Customizing" : "Customize Presets";
+    customize.setAttribute("aria-expanded", String(active));
+  }
+  if (panel) panel.hidden = !active;
+  dock.classList.toggle("dqb-customizing-preset", active);
+  for (const button of dock.querySelectorAll('[data-preset]')) {
+    button.classList.toggle("dqb-preset-editing", active && button.dataset.preset === customizingPreset);
+    button.setAttribute("aria-pressed", String(active && button.dataset.preset === customizingPreset));
+  }
+  if (!active) return;
+  const name = presetDisplayName(customizingPreset);
+  const label = dock.querySelector('[data-role="preset-name"]');
+  if (label) label.textContent = name;
+  const save = dock.querySelector('[data-action="save-preset"]');
+  if (save) {
+    save.textContent = "Save " + name;
+    save.disabled = !presetDirty;
+  }
+  const reset = dock.querySelector('[data-action="restore-preset"]');
+  if (reset) {
+    reset.textContent = "Restore " + name;
+    reset.disabled = !presetDirty && !Object.hasOwn(preferences.presets, customizingPreset);
+  }
+  const discard = dock.querySelector('[data-action="discard-preset"]');
+  if (discard) discard.disabled = !presetDirty;
+  const status = dock.querySelector('[data-role="preset-status"]');
+  if (status) status.textContent = presetDirty
+    ? "Unsaved changes. Save or discard before choosing a different button."
+    : Object.hasOwn(preferences.presets, customizingPreset)
+      ? "Customized for this browser. Restore to use the factory settings."
+      : "Factory settings. Edit the style fields below, then Save.";
+}
+function editPreset(key) {
+  if (!Object.hasOwn(PRESETS, key)) return;
+  if (customizingPreset && presetDirty && customizingPreset !== key) {
+    notify("Save or discard your " + presetDisplayName(customizingPreset) + " edits first.");
+    return;
+  }
+  customizingPreset = key;
+  presetOriginal = presetEditorStyle(preferences, key);
+  presetDraft = normalizePrefs(presetOriginal);
+  presetDirty = false;
+  updateDockInputs();
+}
+function finishPresetEditing() {
+  if (presetDirty) {
+    notify("Discard unsaved preset edits before closing, or Save them.");
+    return;
+  }
+  customizingPreset = null;
+  presetDraft = null;
+  presetOriginal = null;
+  presetDirty = false;
+  updateDockInputs();
+}
+function handlePresetAction(action) {
+  if (action === "customize-presets") {
+    if (customizingPreset) finishPresetEditing();
+    else editPreset("outline");
+    return true;
+  }
+  if (!customizingPreset) return false;
+  if (action === "discard-preset") {
+    presetDraft = normalizePrefs(presetOriginal);
+    presetDirty = false;
+  } else if (action === "save-preset") {
+    if (!presetDirty) return true;
+    preferences = savePreset(preferences, customizingPreset, presetDraft);
+    safeSave();
+    presetOriginal = presetEditorStyle(preferences, customizingPreset);
+    presetDraft = normalizePrefs(presetOriginal);
+    presetDirty = false;
+  } else if (action === "restore-preset") {
+    preferences = restorePreset(preferences, customizingPreset);
+    safeSave();
+    presetOriginal = presetEditorStyle(preferences, customizingPreset);
+    presetDraft = normalizePrefs(presetOriginal);
+    presetDirty = false;
+  } else return false;
+  updateDockInputs();
+  return true;
+}
+
 function queueDirectStylePatch(patch) {
   if (!patch || !isUsable() || !canvas.drawings.active) return;
   const selected = selectedEditableObjects();
@@ -258,13 +359,13 @@ function dragHeader(root) {
 function createDock() {
   const root = document.createElement("section");
   root.id = "foundry-drawing-quickbar";
-  root.setAttribute("aria-label", "Drawing Quickbar");
+  root.setAttribute("aria-label", "AFT Drawing Tools+");
   root.innerHTML = `
     <div class="dqb-header">
-      <span class="dqb-header-title"><i class="fa-solid fa-pen-ruler" aria-hidden="true"></i> Drawing Quickbar <small>v0.1.21</small></span>
+      <span class="dqb-header-title"><i class="fa-solid fa-pen-ruler" aria-hidden="true"></i> AFT Drawing Tools+ <small>v0.1.22</small></span>
       <div class="dqb-header-actions">
         <button type="button" class="dqb-to-tokens" data-action="tokens" aria-label="Return to Token Controls" title="Return to Token Controls; keep Quickbar open"><i class="fa-solid fa-arrow-pointer" aria-hidden="true"></i> Tokens</button>
-        <button type="button" class="dqb-icon" data-action="close" aria-label="Close Drawing Quickbar" title="Close and return to Tokens"><i class="fa-solid fa-xmark"></i></button>
+        <button type="button" class="dqb-icon" data-action="close" aria-label="Close AFT Drawing Tools+" title="Close and return to Tokens"><i class="fa-solid fa-xmark"></i></button>
       </div>
     </div>
     <div class="dqb-content">
@@ -342,6 +443,18 @@ function createDock() {
         <button type="button" data-preset="highlight">Highlight</button>
         <button type="button" data-preset="filled">Filled</button>
       </div>
+      <button type="button" class="dqb-preset-customize" data-action="customize-presets"
+        aria-expanded="false">Customize Presets</button>
+      <section class="dqb-preset-editor" aria-label="Customize style presets" hidden>
+        <p>Choose a preset button above to edit <strong data-role="preset-name">Outline</strong>.
+          The style controls below edit only the preset, not any selected Drawing.</p>
+        <div class="dqb-preset-editor-actions">
+          <button type="button" data-action="save-preset">Save Outline</button>
+          <button type="button" data-action="restore-preset">Restore Outline</button>
+          <button type="button" data-action="discard-preset">Discard Edits</button>
+        </div>
+        <small data-role="preset-status" role="status"></small>
+      </section>
       <div class="dqb-fields">
         <label>Stroke <input name="strokeColor" type="color" aria-label="Stroke color"></label>
         <label>Fill <input name="fillColor" type="color" aria-label="Fill color"></label>
@@ -354,7 +467,7 @@ function createDock() {
       <label class="dqb-option"><input name="autoStyle" type="checkbox"> Apply my default style to new Drawings</label>
 
       <div class="dqb-help">Finished editing? Click Tokens above or close this Quickbar to resume using tokens. Deselect never deletes; Delete confirms. Route uses waypoints. Undo Style Change only restores appearance.</div>
-      <div class="dqb-footer"><button type="button" data-action="tutorial" title="Reopen the quick tutorial anytime" aria-label="Open Drawing Quickbar tutorial"><i class="fa-solid fa-circle-question" aria-hidden="true"></i> Tutorial</button></div>
+      <div class="dqb-footer"><button type="button" data-action="tutorial" title="Reopen the AFT Drawing Tools+ tutorial" aria-label="Open AFT Drawing Tools+ tutorial"><i class="fa-solid fa-circle-question" aria-hidden="true"></i> Tutorial</button></div>
     </div>`;
   document.body.append(root);
   const left = preferences.position?.left ?? 112;
@@ -367,18 +480,25 @@ function createDock() {
     if (!button || !root.contains(button)) return;
     if (button.dataset.tool) return selectTool(button.dataset.tool, {toggleSelection: true});
     if (button.dataset.preset) {
+      if (customizingPreset) {
+        editPreset(button.dataset.preset);
+        return;
+      }
+      const patch = effectivePreset(preferences, button.dataset.preset);
+      if (!patch) return;
       const mode = styleTargetMode(selectedDrawingObjects().map(item => ({
         id: item.document.id, locked: !canEdit(item.document)
       })));
       if (mode.mode === "single") {
-        editingStyle = normalizePrefs({...activeStyle(), ...PRESETS[button.dataset.preset]});
+        editingStyle = normalizePrefs({...activeStyle(), ...patch});
         queueDirectStylePatch(drawingAppearancePatch(selectedDrawingObjects()[0]?.document, editingStyle));
       } else {
-        preferences = normalizePrefs({...preferences, ...PRESETS[button.dataset.preset]});
+        preferences = normalizePrefs({...preferences, ...patch});
         safeSave();
       }
       updateDockInputs();
     }
+    if (handlePresetAction(button.dataset.action)) return;
     if (button.dataset.action === "close") closeDock();
     if (button.dataset.action === "tokens") await returnToTokens();
     if (button.dataset.action === "tutorial") showTutorial();
@@ -432,6 +552,11 @@ function createDock() {
     if (input.name === "autoStyle") {
       preferences.autoStyle = input.checked;
       safeSave();
+    } else if (customizingPreset) {
+      const draft = {...presetDraft, [input.name]: value};
+      if (input.name === "fillColor" || input.name === "fillAlpha") draft.filled = true;
+      presetDraft = normalizePrefs(draft);
+      presetDirty = presetStylesDiffer(presetDraft, presetOriginal);
     } else {
       const mode = styleTargetMode(selectedDrawingObjects().map(item => ({
         id: item.document.id, locked: !canEdit(item.document)
@@ -478,7 +603,7 @@ function showTutorial() {
   dialog.setAttribute("aria-labelledby", "dqb-tutorial-title");
   dialog.innerHTML = `
     <div class="dqb-tour-header">
-      <strong><i class="fa-solid fa-circle-question" aria-hidden="true"></i> Drawing Quickbar Tutorial</strong>
+      <strong><i class="fa-solid fa-circle-question" aria-hidden="true"></i> AFT Drawing Tools+ Tutorial</strong>
       <button type="button" data-tour="later" title="Not now" aria-label="Close tutorial">×</button>
     </div>
     <div class="dqb-tour-content">
@@ -593,6 +718,11 @@ function closeDock({restoreTokens = true} = {}) {
   if (pendingStyle) void flushDirectStylePatch();
   editingDrawingId = null;
   editingStyle = null;
+  // Uncommitted preset edits never persist or write to a selected Scene Drawing.
+  customizingPreset = null;
+  presetDraft = null;
+  presetOriginal = null;
+  presetDirty = false;
   clearFocusMarker();
   exitArrow();
   exitTextPlacement();
@@ -1703,7 +1833,7 @@ function onKeydown(event) {
 
 Hooks.once("init", () => {
   game.settings.register(MODULE_ID, "preferences", {
-    name: "Drawing Quickbar preferences",
+    name: "AFT Drawing Tools+ preferences",
     hint: "Per-browser drawing styles and quickbar position",
     scope: "client", config: false, type: Object,
     default: structuredClone(DEFAULT_PREFS)
@@ -1715,7 +1845,7 @@ Hooks.once("init", () => {
       const tools = controls[controlName]?.tools;
       if (!tools) continue;
       tools.drawingQuickbar = {
-        name: "drawingQuickbar", title: "Drawing Quickbar", icon: "fa-solid fa-pen-ruler",
+        name: "drawingQuickbar", title: "AFT Drawing Tools+", icon: "fa-solid fa-pen-ruler",
         order: 95, button: true, visible: true,
         onChange: () => toggleDock({activateDrawings: controlName === "drawings"})
       };
@@ -1791,5 +1921,5 @@ Hooks.once("ready", () => {
     // A tool switch or Scene navigation should never leave an invisible input shield over the canvas.
     if (arrowOverlay && !arrowOverlay.contains(event.target) && !dock?.contains(event.target) && !canvas?.drawings?.active) exitArrow();
   });
-  console.info(`${MODULE_ID} | v0.1.21 ready (Foundry v14 native Drawing workflow)`);
+  console.info(`${MODULE_ID} | v0.1.22 ready (Foundry v14 native Drawing workflow)`);
 });

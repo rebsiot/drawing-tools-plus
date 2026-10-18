@@ -1,3 +1,17 @@
+# Test Report - AFT Drawing Tools+ v0.1.22
+
+## v0.1.22 - Preset customization and floating box header (2026-10-18)
+
+**Source:** GitHub `rebsiot/drawing-tools-plus`, exact verified main/release v0.1.21 commit `c98055fc45a17741f9ab53dd4bf6942c5b596e9b`. Full installable ZIP recovered through the matching GitHub Actions workflow artifact; existing published v0.1.21 manifest and release assets checked. Current installed module version was not audited.
+
+**Scope:** Rename only user-visible floating Quickbar title/launcher/tutorial to **AFT Drawing Tools+**; preserve ID `foundry-drawing-quickbar`. Add per-browser factory-named style preset overrides inside the existing client-scoped `preferences` setting. Existing preference records without `presets` normalize to an empty overrides object. The four original factory preset patches remain unchanged until individually overridden. All custom editing occurs in a temporary draft and makes no Scene Drawing changes. Save and Restore change only client settings. No world data migration and no changes to Actor/Scene/Journal IDs or ownership.
+
+**Automated/mock tests:** Node v22.16.0 `npm test`: **114 passed, 0 failed**. Includes source-level handler and absence-of-Scene-write checks, model tests for legacy preference migration, per-button save/restore isolation, serialization, invalid input sanitization and factory fallback. `node --check` succeeds on the entry point and model. Full ZIP CRC verified, **57 packaged files**, no internal handoff in the distribution, and an independent clean extraction passed **114/114** tests. GitHub CI and live Foundry are separate evidence categories.
+
+**Live testing:** NOT RUN in the user's live Foundry v14 for v0.1.22. First smoke test on disposable Drawings: select one object, Customize Danger, edit color, confirm selected object unchanged, Save, close/reopen, apply preset, Restore Danger, confirm original style; then verify locked GM art, player permissions, Locate large rectangles and Multi-Delete Cancel/Confirm.
+
+**Rollback:** Use published v0.1.21 beta ZIP without changing module ID. The new optional preference field is ignored by older versions; restoring the old module code does not restore any Drawings that players delete/edit in the world, so maintain a separate world backup.
+
 # Test Report - AFT Drawing Tools+ v0.1.21
 
 ## v0.1.21 - AFT Module Manager prefix (2026-10-18)

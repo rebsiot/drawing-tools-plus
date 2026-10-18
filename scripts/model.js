@@ -12,6 +12,7 @@ export const DEFAULT_PREFS = Object.freeze({
   autoStyle: true,
   arrowEnds: "end",
   arrowHeadShape: "triangle",
+  presets: Object.freeze({}),
   position: null
 });
 
@@ -21,6 +22,10 @@ const normalizeArrowEnds = ends => ARROW_END_OPTIONS.includes(ends) ? ends : "en
 const normalizeArrowHeadShape = shape => ARROW_HEAD_SHAPES.includes(shape) ? shape : "triangle";
 const STYLABLE = ["strokeColor", "strokeWidth", "strokeAlpha", "fillType", "fillColor", "fillAlpha", "textColor", "fontSize"];
 const HEX_COLOR = /^#[\da-fA-F]{6}$/;
+export const PRESET_STYLE_KEYS = Object.freeze([
+  "strokeColor", "fillColor", "textColor", "strokeWidth", "strokeAlpha",
+  "fillAlpha", "filled", "fontSize"
+]);
 const clamp = (value, lower, upper, fallback) => {
   const number = Number(value);
   return Number.isFinite(number) ? Math.min(upper, Math.max(lower, number)) : fallback;
@@ -31,6 +36,32 @@ export function normalizePrefs(source = {}) {
   if (!source || typeof source !== "object" || Array.isArray(source)) source = {};
   const d = DEFAULT_PREFS;
   const position = source.position;
+  // Client setting existed long before editable presets; old records omit this field.
+  // Accept only built-in preset keys and style fields. Never store arbitrary world data.
+  const presets = {};
+  const entries = source.presets;
+  if (entries && typeof entries === "object" && !Array.isArray(entries)) {
+    for (const key of Object.keys(PRESETS)) {
+      const custom = Object.hasOwn(entries, key) ? entries[key] : null;
+      if (!custom || typeof custom !== "object" || Array.isArray(custom)) continue;
+      // Filter unsupported fields; malformed values fall back to that button's
+      // factory patch rather than the unrelated global Drawing defaults.
+      const fields = {};
+      for (const name of PRESET_STYLE_KEYS) {
+        if (!Object.hasOwn(custom, name)) continue;
+        const value = custom[name];
+        if (name.endsWith("Color") &&
+            (typeof value !== "string" || !HEX_COLOR.test(value))) continue;
+        if (name === "filled" && typeof value !== "boolean") continue;
+        if (!name.endsWith("Color") && name !== "filled" &&
+            (value === null || !Number.isFinite(Number(value)))) continue;
+        fields[name] = value;
+      }
+      const sourceStyle = {...DEFAULT_PREFS, ...PRESETS[key], ...fields, presets: null};
+      const clean = normalizePrefs(sourceStyle);
+      presets[key] = Object.fromEntries(PRESET_STYLE_KEYS.map(name => [name, clean[name]]));
+    }
+  }
   return {
     strokeColor: color(source.strokeColor, d.strokeColor),
     fillColor: color(source.fillColor, d.fillColor),
@@ -43,6 +74,7 @@ export function normalizePrefs(source = {}) {
     autoStyle: typeof source.autoStyle === "boolean" ? source.autoStyle : d.autoStyle,
     arrowEnds: normalizeArrowEnds(source.arrowEnds),
     arrowHeadShape: normalizeArrowHeadShape(source.arrowHeadShape),
+    presets,
     position: position && Number.isFinite(position.left) && Number.isFinite(position.top)
       ? {left: position.left, top: position.top} : null
   };
@@ -54,6 +86,44 @@ export const PRESETS = Object.freeze({
   highlight: {strokeColor: "#f5ca4e", fillColor: "#f5ca4e", strokeWidth: 2, filled: true, fillAlpha: 0.23},
   filled: {strokeColor: "#56a5eb", fillColor: "#56a5eb", strokeWidth: 2, filled: true, fillAlpha: 0.5}
 });
+
+/** Return either a saved complete style or the original factory preset patch. */
+export function effectivePreset(preferences, key) {
+  if (!Object.hasOwn(PRESETS, key)) return null;
+  // The extra normalize prevents malformed stored values from leaking to native Drawing writes.
+  const custom = normalizePrefs(preferences).presets[key];
+  return custom ? {...custom} : {...PRESETS[key]};
+}
+
+/** Show the preset as a complete, editable style without changing actual Drawing defaults. */
+export function presetEditorStyle(preferences, key) {
+  const patch = effectivePreset(preferences, key);
+  return patch ? normalizePrefs({...normalizePrefs(preferences), ...patch}) : null;
+}
+
+/** Save an entire style snapshot for precisely one factory-named button. */
+export function savePreset(preferences, key, editedStyle) {
+  if (!Object.hasOwn(PRESETS, key)) return null;
+  const prior = normalizePrefs(preferences);
+  const cleanStyle = normalizePrefs({...prior, ...editedStyle, presets: null});
+  const values = Object.fromEntries(PRESET_STYLE_KEYS.map(name => [name, cleanStyle[name]]));
+  return normalizePrefs({...prior, presets: {...prior.presets, [key]: values}});
+}
+
+/** Revert precisely one button to the original built-in patch, preserving other buttons. */
+export function restorePreset(preferences, key) {
+  if (!Object.hasOwn(PRESETS, key)) return null;
+  const prior = normalizePrefs(preferences);
+  const next = {...prior.presets};
+  delete next[key];
+  return normalizePrefs({...prior, presets: next});
+}
+
+/** True if the saveable style values differ, ignoring position and Drawing ownership. */
+export function presetStylesDiffer(left, right) {
+  if (!left || !right) return true;
+  return PRESET_STYLE_KEYS.some(key => left[key] !== right[key]);
+}
 
 /** Match Foundry v14 DrawingDocument style fields; do not touch geometry or identity. */
 export function stylePatch(prefs) {

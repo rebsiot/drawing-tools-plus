@@ -558,3 +558,33 @@
   overflow-wrap: anywhere;
 }
 .dqb-delete-targets code, .dqb-delete-skipped code { font-size: .82em; }
+
+/* User-owned preset editing stays collapsed until requested, without writing Scene data. */
+#foundry-drawing-quickbar .dqb-preset-customize {
+  display: block; margin: 5px 0 0 auto; padding: 4px 8px;
+  font-size: 10px; background: transparent; border-color: #596575;
+}
+#foundry-drawing-quickbar .dqb-preset-editor {
+  margin: 6px 0 0; padding: 8px; border: 1px solid #6d839c;
+  border-radius: 5px; background: #283547;
+}
+#foundry-drawing-quickbar .dqb-preset-editor[hidden] { display: none; }
+#foundry-drawing-quickbar .dqb-preset-editor p {
+  margin: 0 0 7px; font-size: 11px; line-height: 1.4;
+}
+#foundry-drawing-quickbar .dqb-preset-editor-actions {
+  display: grid; grid-template-columns: repeat(3,minmax(0,1fr)); gap: 5px;
+}
+#foundry-drawing-quickbar .dqb-preset-editor-actions button {
+  padding: 6px 3px; font-size: 10px;
+}
+#foundry-drawing-quickbar .dqb-preset-editor [data-role="preset-status"] {
+  display: block; font-size: 10px; color: #d5dce5; padding-top: 6px;
+}
+#foundry-drawing-quickbar .dqb-presets button.dqb-preset-editing {
+  outline: 2px solid #f2c862; outline-offset: 1px;
+  border-color: #f2c862;
+}
+#foundry-drawing-quickbar.dqb-customizing-preset .dqb-style-scope {
+  border-left-color: #f2c862;
+}

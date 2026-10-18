@@ -8,6 +8,18 @@
 **Status:** 11/11 automated/mock tests passed; **live Foundry test not yet performed**. No official Foundry package publication has occurred.
 **Code provenance:** first source import from the 0.1.0 ZIP; metadata/documentation/CI additions only, not a tested functionality upgrade.
 
+## G01 - v0.1.22 Floating header and individually editable presets (2026-10-18)
+
+**Approval:** User requested the floating Quickbar box title match **AFT Drawing Tools+** and asked to customize/reset each existing style preset. G01 owner; module ID/repo and old thread aliases unchanged.
+
+**Verified baseline:** GitHub `rebsiot/drawing-tools-plus`, `v0.1.21` tagged beta, exact main commit `c98055fc45a17741f9ab53dd4bf6942c5b596e9b`. Matching complete ZIP recovered from validation workflow artifact. Local Foundry installation not inspected.
+
+**Implementation:** User-visible header/launcher/tutorial match **AFT Drawing Tools+**. Original Outline/Danger/Highlight/Filled presets remain factory constants. Existing client-scoped `preferences` Object adds optional sanitized, keyed `presets` overrides; no new settings key, world flag or migration. Customize Presets opens an independent editing draft using current style controls; changes never automatically write to Drawing documents, even with an editable Drawing selected. Save persists one full style definition for that browser; Restore deletes only that override and reverts to the original partial factory patch. Preserve existing selection, styles, native locks and author permissions, and multi-delete safeguards.
+
+**Automated:** Unit/model/source checks plus clean ZIP validation. Live GM/player testing for new editor and older Locate/lock/delete flows still pending. Roll back to v0.1.21. Screenshot-first public README standard still needs a real, authorized Quickbar screenshot; do not fabricate one.
+
+**Smoke test:** On backed-up disposable Scene select an unlocked Drawing; customize Danger without changing that Drawing; save/customized apply after exit; reload; restore Danger; confirm other presets retain their settings. Test both GM and allowed player and verify locked gridline Drawings still cannot be edited. Finish with Locate and Multi-Delete Cancel/Confirm.
+
 ## G01 - v0.1.21 Module Manager name correction (2026-10-18)
 
 **Request:** Display precisely **AFT Drawing Tools+** in the Foundry Manage Modules enabled/disabled list, correcting the unprefixed v0.1.20 title. This is a user-approved naming fix, not authorization to rename the repository, module ID or internal Quickbar interface.

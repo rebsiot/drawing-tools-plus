@@ -9,7 +9,7 @@ test("Token and Drawing controls use one Quickbar, with no layer switch on Token
   // Both launchers share this one control declaration and use the Quickbar's own symbol.
   assert.match(source, /icon: "fa-solid fa-pen-ruler"/);
   assert.doesNotMatch(source, /icon: "fa-solid fa-palette"/);
-  assert.match(source, /<i class="fa-solid fa-pen-ruler" aria-hidden="true"><\/i> Drawing Quickbar/);
+  assert.match(source, /<i class="fa-solid fa-pen-ruler" aria-hidden="true"><\/i> AFT Drawing Tools+/);
   assert.match(source, /onChange: \(\) => toggleDock\(\{activateDrawings: controlName === "drawings"\}\)/);
   assert.match(source, /async function openDock\(\{activateDrawings = true\} = \{\}\)/);
   assert.match(source, /if \(activateDrawings\) \{\s*try \{ await ui\.controls\.activate/);

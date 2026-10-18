@@ -1,5 +1,12 @@
 # Drawing Tools+ — Changelog
 
+## v0.1.22 - Editable, restorable style presets and unified title (beta; 2026-10-18)
+- **Added:** Customize Presets for each of Outline, Danger, Highlight and Filled, using the existing style sliders. Save a complete style snapshot or restore precisely one button to its original factory behavior.
+- **Safety:** Preset editor changes an isolated draft, never a selected native Scene Drawing. Saved values live only in the existing per-client preferences. Other presets, Scene data, Drawing IDs, flags, locks, native permissions, and settings keys are preserved; no world migration.
+- **Fixed:** The floating Quickbar header, its launcher label and tutorial now use **AFT Drawing Tools+**, consistent with the Foundry Module Manager title. Internal module ID and CSS hooks remain unchanged.
+- **Documentation:** Short first-use README; advanced controls, permissions and tests in linked documents. No authorized live screenshot has been supplied for the README yet.
+- **Verification:** Node/static/mock and clean-ZIP tests are recorded separately from pending real Foundry v14 GM/player preset/lock/Locate/Multi-Delete tests. Prior v0.1.21 beta remains rollback.
+
 ## v0.1.21 - AFT module list prefix (beta; 2026-10-18)
 - **Improved:** The Foundry Manage Modules entry now displays **AFT Drawing Tools+** so it is easy to recognize among enabled and disabled add-ons.
 - **Preserved:** Existing `foundry-drawing-quickbar` module ID, update manifest, settings, Scene Drawing data, permissions, and all drawing/Locate/Multi-Delete behavior. No data migration.

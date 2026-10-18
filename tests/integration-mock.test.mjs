@@ -37,7 +37,7 @@ test('v14 lifecycle registers a GM-only native control and never mutates drawing
     const launcher = nativeControls[layer].tools.drawingQuickbar;
     assert.equal(launcher.button, true, layer + ' quickbar is a button');
     assert.equal(launcher.name, 'drawingQuickbar', layer + ' uses the same module launcher');
-    assert.equal(launcher.title, 'Drawing Quickbar');
+    assert.equal(launcher.title, 'AFT Drawing Tools+');
     assert.equal(typeof launcher.onChange, 'function');
   }
   assert.equal(nativeControls.tokens.tools.target.name,'target','Existing Token tools remain intact');
